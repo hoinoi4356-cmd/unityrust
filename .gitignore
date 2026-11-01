@@ -1,0 +1,17 @@
+# Залежності
+node_modules/
+
+# База, заявки, тикети, бани — не комітимо
+data/
+
+# Секрети
+.env
+.env.*
+!.env.example
+nexus-site.config.json
+
+# Логи
+*.log
+
+# Готові архіви для хостингу
+dist/

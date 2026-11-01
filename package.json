@@ -1,0 +1,16 @@
+{
+  "name": "unity-rust-nexus",
+  "version": "1.0.0",
+  "private": true,
+  "description": "UNITY RUST — сайт і панель керування Rust-сервером",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=24"
+  },
+  "dependencies": {
+    "ws": "^8.22.0"
+  }
+}
