@@ -2340,8 +2340,28 @@ server.listen(PORT, HOST, () => {
   console.log(`RCON: ${RCON_ENABLED ? "configured" : "disabled"}`);
 });
 
+/* Discord gateway: бот онлайн, поки запущений сервіс.
+   Для самих тікетів це не потрібно — вони йдуть через REST API. */
+let discordBot = null;
+try {
+  const { startDiscordBot } = require("./discord-bot");
+  discordBot = startDiscordBot({ token: DISCORD_BOT_TOKEN, logger: console });
+} catch (error) {
+  console.warn("Discord bot: не запущено —", error?.message || error);
+}
+
+/* Необов'язковий keepalive для Render free: якщо задати KEEPALIVE_URL,
+   сервіс пінгує сам себе і не засинає (бот залишається онлайн). */
+const KEEPALIVE_URL = String(process.env.KEEPALIVE_URL || "").replace(/\/+$/, "");
+if (KEEPALIVE_URL) {
+  const ping = () => fetch(`${KEEPALIVE_URL}/healthz`).catch(() => {});
+  setInterval(ping, 10 * 60 * 1000).unref();
+  console.log(`keepalive: ${KEEPALIVE_URL}/healthz кожні 10 хв`);
+}
+
 /* Render надсилає SIGTERM — закриваємо сервер і SQLite чемно. */
 function shutdown() {
+  try { if (discordBot) discordBot.stop(); } catch (error) {}
   server.close(() => {
     try { db.close(); } catch (error) {}
     process.exit(0);

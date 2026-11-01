@@ -52,6 +52,10 @@ services:
         sync: false
       - key: DISCORD_ROLE_IDS
         sync: false
+      # Необов'язково: тримає free-сервіс (і бота) онлайн 24/7.
+      # Значення — публічна адреса сервісу, напр. https://unity-rust.onrender.com
+      # - key: KEEPALIVE_URL
+      #   sync: false
       - key: PLAYERS_FILE
         sync: false
       - key: DATA_DIR
