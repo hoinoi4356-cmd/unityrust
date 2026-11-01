@@ -379,6 +379,7 @@ window.NEXUS_PHRASES = {
   "Без відео скаргу не приймають. MP4 / WebM / MOV / PNG / JPG — до 60 МБ": ["Без видео жалобу не принимают. MP4 / WebM / MOV / PNG / JPG — до 60 МБ", "Video is required. MP4 / WebM / MOV / PNG / JPG — up to 60 MB"],
   "Відео або скрін необов'язкові. MP4 / WebM / MOV / PNG / JPG — до 60 МБ": ["Видео или скрин необязательны. MP4 / WebM / MOV / PNG / JPG — до 60 МБ", "Video or screenshot is optional. MP4 / WebM / MOV / PNG / JPG — up to 60 MB"],
   "Посилання на додаткові докази": ["Ссылка на дополнительные доказательства", "Link to additional evidence"],
+  "Посилання на канал / портфоліо (необов'язково)": ["Ссылка на канал / портфолио (необязательно)", "Channel / portfolio link (optional)"],
 
   /* ---------- Placeholders / aria-labels ---------- */
   "Unity Rust — на початок": ["Unity Rust — на главную", "Unity Rust — home"],
@@ -468,5 +469,16 @@ window.NEXUS_PHRASES = {
   "Сума": ["Сумма", "Amount"],
   "Товар": ["Товар", "Item"],
   "Ціна": ["Цена", "Price"],
-  "активацій": ["активаций", "activations"]
+  "активацій": ["активаций", "activations"],
+  "активовано": ["активирован", "activated"],
+  "створено": ["создан", "created"],
+  "видалено": ["удалено", "deleted"],
+  "Докази:": ["Доказательства:", "Evidence:"],
+  "Файл:": ["Файл:", "File:"],
+  "відкрити": ["открыть", "open"],
+  "Відкрита": ["Открыта", "Open"],
+  "Відхилено": ["Отклонено", "Rejected"],
+  "Завдання видалено": ["Задание удалено", "Task deleted"],
+  "Промокод створено": ["Промокод создан", "Promo code created"],
+  "Промокод активовано": ["Промокод активирован", "Promo code activated"]
 };

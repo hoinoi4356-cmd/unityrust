@@ -1106,7 +1106,12 @@ const server = http.createServer(async (req, res) => {
 
   /* Render health check: не вимагає ні пароля, ні RCON. */
   if (pathname === "/healthz" && (method === "GET" || method === "HEAD")) {
-    sendJson(res, 200, { ok: true, uptime: Math.round(process.uptime()) });
+    sendJson(res, 200, {
+      ok: true,
+      uptime: Math.round(process.uptime()),
+      commit: String(process.env.RENDER_GIT_COMMIT || "").slice(0, 12),
+      bot: Boolean(discordBot)
+    });
     return;
   }
 

@@ -4111,8 +4111,8 @@
                       <textarea id="mediaPlan" name="contentPlan" rows="3" required></textarea>
                     </div>
                     <div class="field">
-                      <label for="mediaPortfolio">Посилання на канал / портфоліо *</label>
-                      <input id="mediaPortfolio" name="portfolio" type="url" placeholder="https://youtube.com/@channel" autocomplete="off" required>
+                      <label for="mediaPortfolio">Посилання на канал / портфоліо (необов'язково)</label>
+                      <input id="mediaPortfolio" name="portfolio" type="text" placeholder="https://youtube.com/@channel" autocomplete="off">
                     </div>
                   </div>
                 </div>
@@ -4196,7 +4196,7 @@
               </div>
               <div class="field">
                 <label for="reportEvidence">Посилання на додаткові докази</label>
-                <input id="reportEvidence" type="url" placeholder="https://youtube.com/… або Discord" autocomplete="off">
+                <input id="reportEvidence" type="text" placeholder="https://youtube.com/… або Discord" autocomplete="off">
               </div>
               <button class="btn btn-primary" type="submit">Надіслати скаргу</button>
               <p class="cabinet-note" id="reportStatus"></p>
@@ -4499,6 +4499,36 @@
         toastTimer = setTimeout(() => toast.classList.remove("show"), 2600);
       }
 
+      /* Переклад окремих фрагментів динамічних повідомлень. */
+      function tr(text) {
+        try {
+          const i18n = window.NexusI18N;
+          if (i18n && typeof i18n.t === "function") return i18n.t(text);
+          const saved = localStorage.getItem("nexusSiteLang");
+          const entry = (window.NEXUS_PHRASES || {})[text];
+          if (saved && saved !== "ua" && entry) return entry[saved === "ru" ? 0 : 1] || text;
+          return text;
+        } catch (error) { return text; }
+      }
+
+      function roleLabel(role) {
+        return { media: "Медіа", moderator: "Модератор", admin: "Адміністратор", other: "Інше" }[role] || role || "—";
+      }
+
+      function reportStatusLabel(status) {
+        return { open: "Відкрита", resolved: "Розглянуто", rejected: "Відхилено" }[status] || status || "—";
+      }
+
+      function currentLocale() {
+        let lang = "ua";
+        try {
+          lang = window.NexusI18N && window.NexusI18N.getLang
+            ? window.NexusI18N.getLang()
+            : (localStorage.getItem("nexusSiteLang") || "ua");
+        } catch (error) {}
+        return lang === "ru" ? "ru-RU" : lang === "en" ? "en-GB" : "uk-UA";
+      }
+
       /* Публічний режим: вимикаємо вхід через Steam і ховаємо зайве. */
       let siteInfo = { publicMode: false, steamLogin: true };
       fetch("/api/site-info")
@@ -4651,7 +4681,7 @@
               <td>${Number(purchase.price)} ₴</td>
               <td>${Number(purchase.qty)}</td>
               <td>${Number(purchase.total)} ₴</td>
-              <td>${escapeHtml(new Date(purchase.createdAt).toLocaleString("uk-UA"))}</td>
+              <td>${escapeHtml(new Date(purchase.createdAt).toLocaleString(currentLocale()))}</td>
             </tr>
           `).join("");
           wrap.hidden = true;
@@ -4740,7 +4770,7 @@
       const cartCheckout = document.getElementById("cartCheckout");
 
       function formatPrice(value) {
-        return new Intl.NumberFormat("uk-UA").format(value) + " ₴";
+        return new Intl.NumberFormat(currentLocale()).format(value) + " ₴";
       }
 
       function setCartOpen(open) {
@@ -4970,7 +5000,7 @@
                 const elP = document.getElementById("officePurchases");
                 const elR = document.getElementById("officeRevenue");
                 if (elP) elP.textContent = String(count);
-                if (elR) elR.textContent = new Intl.NumberFormat("uk-UA").format(total) + " ₴";
+                if (elR) elR.textContent = new Intl.NumberFormat(currentLocale()).format(total) + " ₴";
               } catch (error) {
                 // ignore
               }
@@ -5173,9 +5203,9 @@
                 <div class="task-info">
                   <strong>${escapeHtml(task.title)}</strong>
                   <p>${escapeHtml(task.description || "")}</p>
-                  <small>Роль: ${escapeHtml(task.role)} • ${new Date(task.createdAt).toLocaleString("uk-UA")}${task.completed ? ' • Виконано ' + new Date(task.completedAt).toLocaleString("uk-UA") : ''}</small>
+                  <small>${tr("Роль:")} ${escapeHtml(tr(roleLabel(task.role)))} • ${new Date(task.createdAt).toLocaleString(currentLocale())}${task.completed ? ' • ' + tr("Виконано") + ' ' + new Date(task.completedAt).toLocaleString(currentLocale()) : ''}</small>
                 </div>
-                ${task.completed ? '<span class="task-done-badge">✓ Виконано</span>' : '<button class="btn btn-ghost btn-sm" type="button" data-task-complete>Виконати</button>'}
+                ${task.completed ? '<span class="task-done-badge">✓ ' + tr("Виконано") + '</span>' : '<button class="btn btn-ghost btn-sm" type="button" data-task-complete>' + tr("Виконати") + '</button>'}
               </div>
             `).join("");
           }
@@ -5291,7 +5321,7 @@
               const bans = Array.isArray(data.bans) ? data.bans : [];
               if (officeResult) {
                 officeResult.textContent = bans.length
-                  ? bans.map((ban) => `${ban.target} — ${ban.reason} (${new Date(ban.createdAt).toLocaleString("uk-UA")})`).join("\n")
+                  ? bans.map((ban) => `${ban.target} — ${ban.reason} (${new Date(ban.createdAt).toLocaleString(currentLocale())})`).join("\n")
                   : "Активних банів немає.";
               }
             } else if (officeResult) {
@@ -5320,8 +5350,8 @@
               method: "POST",
               body: JSON.stringify({ steamId, code })
             });
-            if (statusEl) statusEl.textContent = `Активовано! ${data.promo.activations}/${data.promo.maxActivations}`;
-            showToast(`Промокод ${code} активовано`);
+            if (statusEl) statusEl.textContent = `${tr("Активовано!")} ${data.promo.activations}/${data.promo.maxActivations}`;
+            showToast(`${tr("Промокод")} ${code} ${tr("активовано")}`);
             document.getElementById("promoActivateCode").value = "";
           } catch (error) {
             if (statusEl) statusEl.textContent = error.message;
@@ -5346,8 +5376,8 @@
               method: "POST",
               body: JSON.stringify({ steamId, code, maxActivations: Number(max) || 1, description: desc })
             });
-            if (statusEl) statusEl.textContent = `Створено: ${data.promo.code} (${data.promo.maxActivations} активацій)`;
-            showToast(`Промокод ${code} створено`);
+            if (statusEl) statusEl.textContent = `${tr("Створено:")} ${data.promo.code} (${data.promo.maxActivations} ${tr("активацій")})`;
+            showToast(`${tr("Промокод")} ${code} ${tr("створено")}`);
             document.getElementById("promoCreateCode").value = "";
             document.getElementById("promoCreateMax").value = "1";
             document.getElementById("promoCreateDesc").value = "";
@@ -5385,7 +5415,7 @@
           <tr>
             <td>${escapeHtml(ban.target)}</td>
             <td>${escapeHtml(ban.reason)}</td>
-            <td>${escapeHtml(new Date(ban.createdAt).toLocaleString("uk-UA"))}</td>
+            <td>${escapeHtml(new Date(ban.createdAt).toLocaleString(currentLocale()))}</td>
             <td><button type="button" class="btn btn-ghost" data-unban="${escapeHtml(ban.id)}">Зняти</button></td>
           </tr>
         `).join("");
@@ -5443,14 +5473,14 @@
           <div class="admin-ticket" data-report-id="${escapeHtml(report.id)}">
             <div class="admin-ticket-head">
               <strong>${escapeHtml(report.target)}</strong>
-              <span class="admin-ticket-meta">${escapeHtml(report.status)} • ${escapeHtml(new Date(report.createdAt).toLocaleString("uk-UA"))}</span>
+              <span class="admin-ticket-meta">${escapeHtml(tr(reportStatusLabel(report.status)))} • ${escapeHtml(new Date(report.createdAt).toLocaleString(currentLocale()))}</span>
             </div>
-            <div class="admin-ticket-meta">Від: ${escapeHtml(report.reporter)}</div>
+            <div class="admin-ticket-meta">${tr("Від:")} ${escapeHtml(report.reporter)}</div>
             <div class="admin-ticket-meta">${escapeHtml(report.reason)}</div>
-            ${report.evidence ? `<div class="admin-ticket-meta">Докази: <a href="${escapeHtml(report.evidence)}" target="_blank" rel="noopener">${escapeHtml(report.evidence)}</a></div>` : ""}
+            ${report.evidence ? `<div class="admin-ticket-meta">${tr("Докази:")} <a href="${escapeHtml(report.evidence)}" target="_blank" rel="noopener">${escapeHtml(report.evidence)}</a></div>` : ""}
             ${report.video ? (isVideo
               ? `<video controls preload="metadata" style="max-width:100%;border-radius:8px;margin-top:6px"><source src="${escapeHtml(report.video)}"></video>`
-              : `<div class="admin-ticket-meta">Файл: <a href="${escapeHtml(report.video)}" target="_blank" rel="noopener">відкрити</a></div>`) : ""}
+              : `<div class="admin-ticket-meta">${tr("Файл:")} <a href="${escapeHtml(report.video)}" target="_blank" rel="noopener">${tr("відкрити")}</a></div>`) : ""}
             ${report.status === "open" ? `
             <div class="admin-ticket-actions">
               <button class="btn btn-primary" type="button" data-report-action="resolve">Розглянуто</button>
@@ -5477,7 +5507,7 @@
           const data = await API.request("/api/overview");
           const set = (id, value) => { const el = document.getElementById(id); if (el) el.textContent = value; };
           set("ovPurchases", String(data.purchases.count));
-          set("ovRevenue", new Intl.NumberFormat("uk-UA").format(data.purchases.total) + " ₴");
+          set("ovRevenue", new Intl.NumberFormat(currentLocale()).format(data.purchases.total) + " ₴");
           set("ovTickets", `${data.tickets.pending} / ${data.tickets.total}`);
           set("ovReports", `${data.reports.open} / ${data.reports.total}`);
           set("ovBans", String(data.bans));
@@ -5501,7 +5531,7 @@
                 <td>${escapeHtml(log.action)}</td>
                 <td>${escapeHtml(log.target)}</td>
                 <td>${escapeHtml(log.reason)}</td>
-                <td>${escapeHtml(new Date(log.createdAt).toLocaleString("uk-UA"))}</td>
+                <td>${escapeHtml(new Date(log.createdAt).toLocaleString(currentLocale()))}</td>
               </tr>
             `).join("");
           }
@@ -5525,7 +5555,7 @@
                 <div style="display:flex;justify-content:space-between;align-items:center;">
                   <div>
                     <strong style="color:var(--cyan)">${escapeHtml(p.code)}</strong>
-                    <span style="color:var(--muted-2);font-size:10px;margin-left:8px;">${p.activations}/${p.maxActivations} активацій</span>
+                    <span style="color:var(--muted-2);font-size:10px;margin-left:8px;">${p.activations}/${p.maxActivations} ${tr("активацій")}</span>
                   </div>
                   <div style="color:var(--muted-2);font-size:10px;">${escapeHtml(p.description || "")}</div>
                 </div>
@@ -5551,7 +5581,7 @@
               <tr>
                 <td>${escapeHtml(a.promoId)}</td>
                 <td>${escapeHtml(a.steamId)}</td>
-                <td>${escapeHtml(new Date(a.activatedAt).toLocaleString("uk-UA"))}</td>
+                <td>${escapeHtml(new Date(a.activatedAt).toLocaleString(currentLocale()))}</td>
               </tr>
             `).join("");
           }
@@ -6942,7 +6972,7 @@
 
       apply(getLang());
 
-      window.NexusI18N = { apply, getLang, dict: I18N };
+      window.NexusI18N = { apply, getLang, dict: I18N, t: (value) => phraseFor(value, currentLang) };
     })();
   </script>
 </body>
