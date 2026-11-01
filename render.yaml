@@ -27,7 +27,7 @@ services:
       - key: DAILY_REPORT_HOUR
         value: "18"
       - key: SERVER_QUERY_HOST
-        value: 5.199.232.192
+        value: 5.199.233.66
       - key: SERVER_QUERY_PORT
         value: "28017"
 
