@@ -1370,6 +1370,7 @@ const server = http.createServer(async (req, res) => {
         createdAt: new Date().toISOString()
       };
       db.prepare(`INSERT INTO reports (id, reporter, target, reason, evidence, video, status, createdAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`).run(report.id, report.reporter, report.target, report.reason, report.evidence, report.video, report.status, report.createdAt);
+      await sendDiscordReportNotification(report);
       sendJson(res, 201, { report });
     } catch (error) {
       sendJson(res, 400, { error: String(error.message || error) });
