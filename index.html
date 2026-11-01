@@ -577,6 +577,7 @@
     const reportForm = document.getElementById('reportForm');
     const reportResult = document.getElementById('reportResult');
     const toast = document.getElementById('toast');
+    const reportEvidence = document.getElementById('reportEvidence');
 
     reportForm.addEventListener('submit', async (e) => {
       e.preventDefault();
@@ -584,7 +585,7 @@
         violationType: document.getElementById('reportType').value,
         target: document.getElementById('reportTarget').value.trim(),
         reason: document.getElementById('reportDesc').value.trim(),
-        evidence: document.getElementById('reportEvidence').value.trim(),
+        evidence: reportEvidence ? reportEvidence.value.trim() : '',
         video: ''
       };
       if (!body.target || !body.reason) return;
