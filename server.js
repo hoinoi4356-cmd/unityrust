@@ -256,6 +256,7 @@ function ensureData() {
       reason TEXT,
       evidence TEXT,
       video TEXT,
+      violationType TEXT,
       status TEXT,
       createdAt TEXT
     );
@@ -297,6 +298,7 @@ function ensureData() {
 
   const reportColumns = db.prepare("PRAGMA table_info(reports)").all().map((column) => column.name);
   if (!reportColumns.includes("video")) db.exec("ALTER TABLE reports ADD COLUMN video TEXT");
+  if (!reportColumns.includes("violationType")) db.exec("ALTER TABLE reports ADD COLUMN violationType TEXT");
 
   const isEmpty = (table) => db.prepare(`SELECT COUNT(*) AS count FROM ${table}`).get().count === 0;
 
@@ -406,33 +408,101 @@ function getAdminLogs() {
   return db.prepare("SELECT * FROM admin_logs ORDER BY createdAt DESC LIMIT 200").all();
 }
 
-/* Універсальна відправка в Discord: вебхук, а якщо його немає —
-   бот-токен + канал (DISCORD_CHANNEL_ID або перший текстовий канал гільдії). */
+/* ===================== Discord: тільки #admin-tickets =====================
+   Усі сповіщення сайту (скарги, заявки, бани, покупки, щоденний звіт)
+   йдуть ВИКЛЮЧНО через бота в один канал — #admin-tickets.
+
+   Канал визначаємо так:
+     1. DISCORD_TICKETS_CHANNEL_ID (або старий DISCORD_CHANNEL_ID), якщо заданий;
+     2. інакше — пошук по назві DISCORD_TICKETS_CHANNEL_NAME (типово admin-tickets).
+
+   «Першого текстового каналу» більше немає: якщо канал не знайдено,
+   сповіщення не піде в чужий канал, а в лог буде попередження. */
+const DISCORD_TICKETS_CHANNEL_ID = String(
+  process.env.DISCORD_TICKETS_CHANNEL_ID || process.env.DISCORD_CHANNEL_ID || ""
+).trim();
+const DISCORD_TICKETS_CHANNEL_NAME = String(
+  process.env.DISCORD_TICKETS_CHANNEL_NAME || "admin-tickets"
+).trim();
+
 let discordChannelCache = null;
+let discordChannelCacheAt = 0;
+/* Якщо канал перейменують — підхопимо нову назву максимум за 5 хвилин. */
+const DISCORD_CHANNEL_TTL = 5 * 60 * 1000;
+
+/* "admin-tickets", "Admin Tickets", "admin_tickets" → "admintickets" */
+function channelNameKey(name) {
+  return String(name || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+}
 
 async function resolveDiscordChannel() {
-  if (process.env.DISCORD_CHANNEL_ID) return String(process.env.DISCORD_CHANNEL_ID).trim();
-  if (discordChannelCache) return discordChannelCache;
+  if (DISCORD_TICKETS_CHANNEL_ID) return DISCORD_TICKETS_CHANNEL_ID;
   if (!DISCORD_BOT_TOKEN || !DISCORD_GUILD_ID) return null;
+
+  if (discordChannelCache && Date.now() - discordChannelCacheAt < DISCORD_CHANNEL_TTL) {
+    return discordChannelCache;
+  }
+
   try {
     const res = await fetch(`https://discord.com/api/v10/guilds/${DISCORD_GUILD_ID}/channels`, {
       headers: { Authorization: `Bot ${DISCORD_BOT_TOKEN}` }
     });
-    if (!res.ok) return null;
+    if (!res.ok) {
+      console.warn("Discord: не вдалося отримати список каналів:", res.status);
+      return null;
+    }
     const channels = await res.json();
     const textChannels = channels.filter((channel) => channel.type === 0 || channel.type === 5);
-    const preferred = textChannels.find((channel) =>
-      /log|report|ticket|заяв|скарг|модер|admin/i.test(String(channel.name || ""))
-    ) || textChannels[0];
-    discordChannelCache = preferred ? preferred.id : null;
+    const wanted = channelNameKey(DISCORD_TICKETS_CHANNEL_NAME);
+    const found = textChannels.find((channel) => channelNameKey(channel.name) === wanted)
+      || textChannels.find((channel) => channelNameKey(channel.name).includes(wanted))
+      || textChannels.find((channel) => {
+        const key = channelNameKey(channel.name);
+        return key.includes("admin") && key.includes("ticket");
+      });
+
+    if (!found) {
+      console.warn(
+        `Discord: канал "${DISCORD_TICKETS_CHANNEL_NAME}" не знайдено на сервері. ` +
+        "Перевір назву каналу або задай DISCORD_TICKETS_CHANNEL_ID."
+      );
+      return null;
+    }
+
+    discordChannelCache = found.id;
+    discordChannelCacheAt = Date.now();
     return discordChannelCache;
   } catch (error) {
+    console.warn("Discord: пошук каналу не вдався:", error?.message || error);
     return null;
   }
 }
 
+/* Бот — основний шлях. Вебхук лишається лише запасним варіантом
+   (коли токен бота не заданий) і теж веде в #admin-tickets. */
 async function sendDiscordPayload(payload) {
-  if (DISCORD_WEBHOOK_URL) {
+  if (DISCORD_BOT_TOKEN) {
+    const channelId = await resolveDiscordChannel();
+    if (channelId) {
+      try {
+        const res = await fetch(`https://discord.com/api/v10/channels/${channelId}/messages`, {
+          method: "POST",
+          headers: {
+            Authorization: `Bot ${DISCORD_BOT_TOKEN}`,
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify(payload)
+        });
+        if (res.ok) return true;
+        console.warn("Discord bot message failed:", res.status, (await res.text()).slice(0, 200));
+      } catch (error) {
+        console.warn("Discord bot message error:", error?.message || error);
+      }
+    }
+  }
+
+  if (!DISCORD_WEBHOOK_URL) return false;
+  try {
     const res = await fetch(DISCORD_WEBHOOK_URL, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -443,39 +513,27 @@ async function sendDiscordPayload(payload) {
       return false;
     }
     return true;
-  }
-  if (!DISCORD_BOT_TOKEN) return false;
-  const channelId = await resolveDiscordChannel();
-  if (!channelId) return false;
-  const res = await fetch(`https://discord.com/api/v10/channels/${channelId}/messages`, {
-    method: "POST",
-    headers: {
-      Authorization: `Bot ${DISCORD_BOT_TOKEN}`,
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify(payload)
-  });
-  if (!res.ok) {
-    console.warn("Discord bot message failed:", res.status);
+  } catch (error) {
+    console.warn("Discord webhook error:", error?.message || error);
     return false;
   }
-  return true;
 }
 
 async function sendDiscordReportNotification(report) {
   if (!DISCORD_WEBHOOK_URL && !DISCORD_BOT_TOKEN) return;
   try {
     const embed = {
-      title: "🚨 Нова скарга на гравця",
+      title: "🚨 Нова скарга з сайту",
       color: 0xff4444,
       fields: [
         { name: "Порушення", value: report.violationType || "—", inline: true },
         { name: "Ціль", value: report.target || "—", inline: true },
-        { name: "Відправник", value: report.reporter || "—", inline: true },
+        { name: "Відправник", value: report.reporter || "guest", inline: true },
         { name: "Опис", value: report.reason ? report.reason.slice(0, 1000) : "—" },
+        { name: "ID", value: report.id || "—", inline: true },
         { name: "Дата", value: new Date(report.createdAt).toLocaleString("uk-UA"), inline: true }
       ],
-      footer: { text: "Unity Rust Anti-Cheat" }
+      footer: { text: "UNITY RUST · #admin-tickets" }
     };
     if (report.video) embed.fields.push({ name: "Відео", value: report.video, inline: false });
     if (report.evidence) embed.fields.push({ name: "Додаткові докази", value: report.evidence.slice(0, 500), inline: false });
@@ -508,11 +566,56 @@ async function sendDiscordTicketNotification(ticket) {
         { name: "ID заявки", value: ticket.id || "—", inline: true },
         { name: "Дата", value: new Date(ticket.createdAt).toLocaleString("uk-UA"), inline: true }
       ],
-      footer: { text: "Unity Rust — заявки" }
+      footer: { text: "UNITY RUST · #admin-tickets" }
     };
     await sendDiscordPayload({ embeds: [embed] });
   } catch (error) {
     console.warn("Discord ticket notification failed:", error?.message || error);
+  }
+}
+
+// ---- Discord: новий бан з панелі ----
+async function sendDiscordBanNotification(ban) {
+  if (!DISCORD_WEBHOOK_URL && !DISCORD_BOT_TOKEN) return;
+  try {
+    const embed = {
+      title: "🔨 Новий бан з панелі",
+      color: 0xff8800,
+      fields: [
+        { name: "Гравець", value: ban.target || "—", inline: true },
+        { name: "Причина", value: ban.reason ? ban.reason.slice(0, 1000) : "—" },
+        { name: "Адмін", value: ban.admin || "—", inline: true },
+        { name: "ID", value: ban.id || "—", inline: true },
+        { name: "Дата", value: new Date(ban.createdAt).toLocaleString("uk-UA"), inline: true }
+      ],
+      footer: { text: "UNITY RUST · #admin-tickets" }
+    };
+    await sendDiscordPayload({ embeds: [embed] });
+  } catch (error) {
+    console.warn("Discord ban notification failed:", error?.message || error);
+  }
+}
+
+// ---- Discord: нова покупка в магазині ----
+async function sendDiscordPurchaseNotification(purchases, steamId) {
+  if (!DISCORD_WEBHOOK_URL && !DISCORD_BOT_TOKEN) return;
+  try {
+    const total = purchases.reduce((sum, item) => sum + (Number(item.total) || 0), 0);
+    const lines = purchases.slice(0, 15).map((item) => `• ${item.productName} ×${item.qty} — ${item.total}₴`).join("\n");
+    const embed = {
+      title: "🛒 Нова покупка на сайті",
+      color: 0x34d399,
+      fields: [
+        { name: "Steam ID", value: steamId || "—", inline: true },
+        { name: "Сума", value: `${total}₴`, inline: true },
+        { name: "Товари", value: lines || "—" },
+        { name: "Дата", value: new Date().toLocaleString("uk-UA"), inline: true }
+      ],
+      footer: { text: "UNITY RUST · #admin-tickets" }
+    };
+    await sendDiscordPayload({ embeds: [embed] });
+  } catch (error) {
+    console.warn("Discord purchase notification failed:", error?.message || error);
   }
 }
 
@@ -1352,6 +1455,7 @@ const server = http.createServer(async (req, res) => {
   if (pathname === "/api/reports" && method === "POST") {
     try {
       const body = await readBody(req);
+      const violationType = String(body.violationType || "").trim().slice(0, 80);
       const target = String(body.target || "").trim().slice(0, 120);
       const reason = String(body.reason || "").trim().slice(0, 2000);
       const evidence = String(body.evidence || "").trim().slice(0, 500);
@@ -1363,13 +1467,15 @@ const server = http.createServer(async (req, res) => {
         id: makeId(),
         reporter,
         target,
+        violationType,
         reason,
         evidence,
         video,
         status: "open",
         createdAt: new Date().toISOString()
       };
-      db.prepare(`INSERT INTO reports (id, reporter, target, reason, evidence, video, status, createdAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`).run(report.id, report.reporter, report.target, report.reason, report.evidence, report.video, report.status, report.createdAt);
+      db.prepare(`INSERT INTO reports (id, reporter, target, violationType, reason, evidence, video, status, createdAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`).run(report.id, report.reporter, report.target, report.violationType, report.reason, report.evidence, report.video, report.status, report.createdAt);
+      /* Скарга з сайту → Discord-бот → канал #admin-tickets. */
       await sendDiscordReportNotification(report);
       sendJson(res, 201, { report });
     } catch (error) {
@@ -1427,6 +1533,8 @@ const server = http.createServer(async (req, res) => {
           saved.push(purchase);
         }
       });
+      /* Покупка → Discord-бот → #admin-tickets. */
+      await sendDiscordPurchaseNotification(saved, steamId);
       sendJson(res, 201, { purchases: saved });
     } catch (error) {
       sendJson(res, 400, { error: String(error.message || error) });
@@ -1768,6 +1876,8 @@ const server = http.createServer(async (req, res) => {
       const bans = getBans();
       bans.unshift(ban);
       saveBans(bans);
+      /* Бан із панелі → Discord-бот → #admin-tickets. */
+      await sendDiscordBanNotification(ban);
 
       let rconResult = null;
       try {

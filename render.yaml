@@ -44,9 +44,11 @@ services:
         sync: false
       - key: DISCORD_GUILD_ID
         sync: false
-      - key: DISCORD_WEBHOOK_URL
+      - key: DISCORD_TICKETS_CHANNEL_ID
         sync: false
-      - key: DISCORD_CHANNEL_ID
+      - key: DISCORD_TICKETS_CHANNEL_NAME
+        value: admin-tickets
+      - key: DISCORD_WEBHOOK_URL
         sync: false
       - key: DISCORD_ROLE_IDS
         sync: false

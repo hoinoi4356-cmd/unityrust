@@ -5,7 +5,7 @@
   "description": "UNITY RUST — сайт і панель керування Rust-сервером",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js"
+    "start": "node --env-file-if-exists=.env server.js"
   },
   "engines": {
     "node": ">=24"

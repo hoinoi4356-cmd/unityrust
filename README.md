@@ -55,10 +55,11 @@ node --env-file=.env server.js
 | `PLAYERS_FILE` | `/var/data/players.json` | статистика гравців для лідерборду |
 | `RCON_NAME` | `UNITY ADMIN` | підпис у RCON |
 | `SITE_MODE` | `public` | сайт без БД і RCON (безкоштовний хостинг) |
-| `DISCORD_BOT_TOKEN` | токен бота | Discord-сповіщення |
+| `DISCORD_BOT_TOKEN` | токен бота | усі сповіщення йдуть через бота |
 | `DISCORD_GUILD_ID` | ID сервера | Discord-сповіщення |
-| `DISCORD_CHANNEL_ID` | ID каналу | куди бот пише (інакше — перший текстовий канал) |
-| `DISCORD_WEBHOOK_URL` | `https://discord.com/api/webhooks/...` | вебхук (альтернатива боту) |
+| `DISCORD_TICKETS_CHANNEL_ID` | ID каналу `#admin-tickets` | куди бот пише (єдиний канал для тікетів/скарг) |
+| `DISCORD_TICKETS_CHANNEL_NAME` | `admin-tickets` | якщо ID не заданий — пошук каналу за назвою |
+| `DISCORD_WEBHOOK_URL` | `https://discord.com/api/webhooks/...` | запасний варіант, якщо бот не заданий |
 | `DISCORD_ROLE_IDS` | `{"admin":"123","moderator":"456"}` | ролі Discord |
 | `DAILY_REPORT_HOUR` | `18` | година щоденного звіту (UTC) |
 
@@ -96,9 +97,9 @@ SITE_MODE=public
   Якщо Rust за playit.gg-тунелем, зроби окремий **UDP-тунель на 28017**
   і встав його адресу в ці змінні.
 * Після кожного рестарту/деплою історія скарг очищається.
-* Щоб скарги не губились, задай `DISCORD_WEBHOOK_URL` (або
-  `DISCORD_BOT_TOKEN` + `DISCORD_GUILD_ID`) — кожна нова **скарга**
-  дублюється в Discord.
+* Щоб скарги не губились, задай `DISCORD_BOT_TOKEN` + `DISCORD_GUILD_ID` —
+  кожна нова **скарга** дублюється в Discord через бота в канал
+  **#admin-tickets** (`DISCORD_TICKETS_CHANNEL_ID` / `DISCORD_TICKETS_CHANNEL_NAME`).
 
 ### RCON, якщо сайт на хостингу, а Rust — вдома
 
