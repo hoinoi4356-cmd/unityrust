@@ -4169,9 +4169,9 @@
             <form class="cabinet-card reveal" id="reportForm" style="margin-top:18px">
               <h3>Нова скарга</h3>
               <div class="field">
-                <label for="reportViolationType">Тип порушення *</label>
-                <select id="reportViolationType" required>
-                  <option value="">Обери тип...</option>
+                <label for="reportViolationType">Тип порушення (необов'язково)</label>
+                <select id="reportViolationType">
+                  <option value="">Не вказано</option>
                   <option value="esp">Чіт: ESP / wallhack (бачить крізь стіни)</option>
                   <option value="aimbot">Чіт: AimBot / автоціль</option>
                   <option value="vanish">Ванаш / прихований гравець</option>
@@ -4190,9 +4190,9 @@
                 <textarea id="reportReason" rows="4" placeholder="Опиши ситуацію детально: куди, коли, що робив" required></textarea>
               </div>
               <div class="field">
-                <label for="reportVideo">Відео або скрін (файлом)</label>
+                <label for="reportVideo">Відео або скрін (необов'язково)</label>
                 <input id="reportVideo" type="file" accept="video/mp4,video/webm,video/quicktime,image/png,image/jpeg,image/gif">
-                <small style="color:var(--muted-2);font-size:10px">Без відео скаргу не приймають. MP4 / WebM / MOV / PNG / JPG — до 60 МБ</small>
+                <small style="color:var(--muted-2);font-size:10px">Відео або скрін необов'язкові. MP4 / WebM / MOV / PNG / JPG — до 60 МБ</small>
               </div>
               <div class="field">
                 <label for="reportEvidence">Посилання на додаткові докази</label>
@@ -4586,7 +4586,6 @@
           const videoFile = document.getElementById("reportVideo")?.files?.[0] || null;
           const statusEl = document.getElementById("reportStatus");
           const submitBtn = reportForm.querySelector('button[type="submit"]');
-          if (!violationType) { showToast("Обери тип порушення"); return; }
           if (!target) { showToast("Вкажи нік або Steam ID"); return; }
           if (!reason) { showToast("Опиши, що сталося"); return; }
           // відео/скрін необов'язкові
@@ -6912,6 +6911,12 @@
 
         translateTree(document.body, lang);
         translateAttrs(document.body, lang);
+
+        const metaDesc = document.querySelector('meta[name="description"]');
+        if (metaDesc) {
+          if (!metaDesc.dataset.i18nOriginal) metaDesc.dataset.i18nOriginal = metaDesc.getAttribute("content") || "";
+          metaDesc.setAttribute("content", phraseFor(metaDesc.dataset.i18nOriginal.trim(), lang));
+        }
 
         document.querySelectorAll("[data-site-lang]").forEach((btn) => {
           btn.classList.toggle("active", btn.getAttribute("data-site-lang") === lang);
