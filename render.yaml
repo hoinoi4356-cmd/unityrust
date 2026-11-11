@@ -42,6 +42,10 @@ services:
         sync: false
       - key: DISCORD_BOT_TOKEN
         sync: false
+      # Окремий токен бота підтримки (Unity rust support). Не той самий,
+      # що DISCORD_BOT_TOKEN для сайту.
+      - key: SUPPORT_BOT_TOKEN
+        sync: false
       - key: DISCORD_GUILD_ID
         sync: false
       - key: DISCORD_TICKETS_CHANNEL_ID

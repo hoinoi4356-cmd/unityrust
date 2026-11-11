@@ -65,6 +65,9 @@ function baseUrlFor(req) {
 
 /* Не секрети, але теж конфігурація — беремо з оточення. */
 const DISCORD_BOT_TOKEN = String(process.env.DISCORD_BOT_TOKEN || "");
+/* Окремий Discord-застосунок підтримки. Якщо заданий, server.js запускає
+   support-bot/ticket-bot.js дочірнім процесом і сам перезапускає його. */
+const SUPPORT_BOT_TOKEN = String(process.env.SUPPORT_BOT_TOKEN || "").trim();
 const DISCORD_GUILD_ID = String(process.env.DISCORD_GUILD_ID || "");
 const DISCORD_WEBHOOK_URL = String(process.env.DISCORD_WEBHOOK_URL || "");
 let DISCORD_ROLE_IDS = {};
@@ -1535,7 +1538,9 @@ const server = http.createServer(async (req, res) => {
       ok: true,
       uptime: Math.round(process.uptime()),
       commit: String(process.env.RENDER_GIT_COMMIT || "").slice(0, 12),
-      bot: Boolean(discordBot)
+      bot: Boolean(discordBot),
+      siteBot: Boolean(discordBot),
+      supportBot: Boolean(supportBotProcess)
     });
     return;
   }
@@ -3388,9 +3393,52 @@ try {
   console.warn("Discord bot: не запущено —", error?.message || error);
 }
 
+/* Support bot: окремий Discord-застосунок, але той самий web service.
+   Дочірній процес ізольований від сайту; при падінні перезапускається. */
+let supportBotProcess = null;
+let supportBotTimer = null;
+let supportBotStopping = false;
+
+function startSupportBot() {
+  if (!SUPPORT_BOT_TOKEN || supportBotStopping) return;
+  const botDir = path.join(__dirname, "support-bot");
+  const botScript = path.join(botDir, "ticket-bot.js");
+  if (!fs.existsSync(botScript)) {
+    console.warn("support-bot: не знайдено support-bot/ticket-bot.js");
+    return;
+  }
+  supportBotProcess = spawn(process.execPath, [botScript], {
+    cwd: botDir,
+    env: {
+      ...process.env,
+      DISCORD_BOT_TOKEN: SUPPORT_BOT_TOKEN,
+      SUPPORT_BOT_DATA_DIR: String(process.env.SUPPORT_BOT_DATA_DIR || path.join(botDir, "data"))
+    },
+    stdio: "inherit"
+  });
+  console.log(`support-bot: запущено pid=${supportBotProcess.pid}`);
+  supportBotProcess.on("error", (error) => {
+    console.error("support-bot: помилка запуску —", error?.message || error);
+  });
+  supportBotProcess.on("exit", (code, signal) => {
+    supportBotProcess = null;
+    if (supportBotStopping) return;
+    console.warn(`support-bot: завершився code=${code ?? ""} signal=${signal ?? ""}; перезапуск через 20 с`);
+    supportBotTimer = setTimeout(startSupportBot, 20000);
+    supportBotTimer.unref();
+  });
+}
+
+if (SUPPORT_BOT_TOKEN) {
+  startSupportBot();
+} else {
+  console.log("support-bot: SUPPORT_BOT_TOKEN не задано — бот підтримки не запущено");
+}
+
 /* Необов'язковий keepalive для Render free: якщо задати KEEPALIVE_URL,
-   сервіс пінгує сам себе і не засинає (бот залишається онлайн). */
-const KEEPALIVE_URL = String(process.env.KEEPALIVE_URL || "").replace(/\/+$/, "");
+   сервіс пінгує сам себе і не засинає (бот залишається онлайн).
+   На Render RENDER_EXTERNAL_URL підставляється автоматично. */
+const KEEPALIVE_URL = String(process.env.KEEPALIVE_URL || process.env.RENDER_EXTERNAL_URL || "").replace(/\/+$/, "");
 if (KEEPALIVE_URL) {
   const ping = () => fetch(`${KEEPALIVE_URL}/healthz`).catch(() => {});
   setInterval(ping, 10 * 60 * 1000).unref();
@@ -3399,6 +3447,9 @@ if (KEEPALIVE_URL) {
 
 /* Render надсилає SIGTERM — закриваємо сервер і SQLite чемно. */
 function shutdown() {
+  supportBotStopping = true;
+  if (supportBotTimer) clearTimeout(supportBotTimer);
+  try { if (supportBotProcess) supportBotProcess.kill("SIGTERM"); } catch (error) {}
   try { if (discordBot) discordBot.stop(); } catch (error) {}
   server.close(() => {
     try { db.close(); } catch (error) {}

@@ -1,0 +1,18 @@
+{
+  "name": "discord-ticket-bot",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Discord бот тикетів підтримки та скарг з RCON для сервера Rust",
+  "main": "ticket-bot.js",
+  "scripts": {
+    "start": "node --env-file-if-exists=.env ticket-bot.js",
+    "dev": "node ticket-bot.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "discord.js": "^14.27.0",
+    "ws": "^8.18.0"
+  }
+}
