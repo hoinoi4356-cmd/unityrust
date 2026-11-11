@@ -72,13 +72,10 @@ if (!TOKEN) {
   process.exit(1);
 }
 
-const DATA_DIR = process.env.SUPPORT_BOT_DATA_DIR
-  ? path.resolve(process.env.SUPPORT_BOT_DATA_DIR)
-  : path.join(__dirname, "data");
+const DATA_DIR = path.join(__dirname, "data");
 const TICKETS_FILE = path.join(DATA_DIR, "tickets.json");
 const MODERATIONS_FILE = path.join(DATA_DIR, "moderations.json");
 const BETAS_FILE = path.join(DATA_DIR, "betas.json");
-fs.mkdirSync(DATA_DIR, { recursive: true });
 
 const TICKET_TYPES = [
   {
@@ -308,7 +305,8 @@ client.on("interactionCreate", async (interaction) => {
 
 /* ===================== ТИКЕТИ / Tickets ===================== */
 async function handleSetupTickets(interaction) {
-  if (!isStaff(interaction.member)) return interaction.reply({ content: ruen("Лиш персонал може публікувати панель тикетів.", "Only staff can post ticket panel."), ephemeral: true });
+  await interaction.deferReply({ flags: 64 });
+  if (!isStaff(interaction.member)) return interaction.editReply({ content: ruen("Лиш персонал може публікувати панель тикетів.", "Only staff can post ticket panel.") });
   const embed = new EmbedBuilder().setColor(0x009dff).setTitle("Support / Підтримка").setDescription([
     "Open a ticket and our team will help you.",
     "Откройте тикет — наша команда поможет.",
@@ -320,17 +318,18 @@ async function handleSetupTickets(interaction) {
   ].join("\n")).setFooter({ text: "UNITY RUST · Support" }).setTimestamp();
   const select = new StringSelectMenuBuilder().setCustomId("ticket_category").setPlaceholder("Виберіть категорію… / Choose a category…").addOptions(TICKET_TYPES.map(t => new StringSelectMenuOptionBuilder().setLabel(t.label).setDescription(t.description).setValue(t.value).setEmoji(t.emoji)));
   await interaction.channel.send({ embeds: [embed], components: [new ActionRowBuilder().addComponents(select)] });
-  await interaction.reply({ content: ruen("Панель тикетов опублікована.", "Ticket panel posted."), ephemeral: true });
+  await interaction.editReply({ content: ruen("Панель тикетов опублікована.", "Ticket panel posted.") });
 }
 
 async function createTicket(interaction, typeValue) {
+  await interaction.deferReply({ flags: 64 });
   const guild = interaction.guild;
   const typeDef = getTicketType(typeValue);
   const type = typeDef.value;
   const existing = Array.from(client.tickets.values()).find(t => t.guildId === guild.id && t.userId === interaction.user.id && t.status === "open");
   if (existing) {
     const ch = guild.channels.cache.get(existing.channelId);
-    if (ch) return interaction.reply({ content: ruen(`У вас уже есть открытый тикет: ${ch}`, `You already have an open ticket: ${ch}`), ephemeral: true });
+    if (ch) return interaction.editReply({ content: ruen(`У вас уже есть открытый тикет: ${ch}`, `You already have an open ticket: ${ch}`) });
     existing.status = "stale"; saveTickets();
   }
   let category = TICKET_CATEGORY_ID ? guild.channels.cache.get(TICKET_CATEGORY_ID) : null;
@@ -360,7 +359,7 @@ async function createTicket(interaction, typeValue) {
   const sent = await channel.send({ content: `${interaction.user} ${staffMention}`, embeds: [embed], components: [row] });
   client.tickets.set(channel.id, { channelId: channel.id, messageId: sent.id, userId: interaction.user.id, type, status: "open", createdAt: nowISO(), guildId: guild.id });
   saveTickets();
-  await interaction.reply({ content: ruen(`Тикет створено: ${channel}`, `Ticket created: ${channel}`), ephemeral: true });
+  await interaction.editReply({ content: ruen(`Тикет створено: ${channel}`, `Ticket created: ${channel}`) });
 }
 
 async function claimTicket(interaction) {
@@ -368,6 +367,7 @@ async function claimTicket(interaction) {
   if (!t) return interaction.reply({ content: ruen("Тикет не знайдено.", "Ticket not found."), ephemeral: true });
   if (!isStaff(interaction.member)) return interaction.reply({ content: ruen("Лиш персонал може взяти тикет на розгляд.", "Only staff can take a ticket."), ephemeral: true });
   if (t.status === "claimed") return interaction.reply({ content: ruen(`Цей тикет вже взято на розгляд: <@${t.claimedBy}>`, `This ticket is already taken by: <@${t.claimedBy}>`), ephemeral: true });
+  await interaction.deferReply({ flags: 64 });
   t.status = "claimed"; t.claimedBy = interaction.user.id; t.claimedAt = nowISO(); saveTickets();
   try {
     const msg = await interaction.channel.messages.fetch(t.messageId);
