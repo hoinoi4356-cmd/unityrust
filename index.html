@@ -8,6 +8,10 @@
   <title>Unity Rust — Rust x2</title>
   <link rel="icon" type="image/png" href="images/favicon.png">
   <link rel="apple-touch-icon" href="images/ur-logo.png">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Unity Rust">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -3104,6 +3108,592 @@
       .apply-stepper { font-size: 9px; gap: 6px; }
       .apply-stepper .step span { width: 22px; height: 22px; }
     }
+    /* ============================================================
+       ПАНЕЛЬ ВЛАСНИКА — окремий кабінет
+       ============================================================ */
+    .ow-page { padding-top: 34px; }
+    .ow-hero {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      gap: 18px;
+      flex-wrap: wrap;
+      margin-bottom: 20px;
+    }
+    .ow-hero h2 {
+      margin: 6px 0 8px;
+      font-family: var(--display);
+      font-size: clamp(28px, 4vw, 46px);
+      line-height: 1;
+      letter-spacing: 0.02em;
+    }
+    .ow-hero p {
+      margin: 0;
+      max-width: 680px;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.7;
+    }
+    .ow-hero-actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+    .ow-live {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 13px;
+      border-radius: 999px;
+      border: 1px solid rgba(0, 240, 255, 0.26);
+      background: rgba(0, 240, 255, 0.08);
+      color: var(--cyan);
+      font-size: 9px;
+      font-weight: 800;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+    }
+    .ow-live::before {
+      content: "";
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: #2dffb3;
+      box-shadow: 0 0 12px #2dffb3;
+      animation: owPulse 2s ease-in-out infinite;
+    }
+    @keyframes owPulse { 50% { opacity: 0.35; } }
+
+    .ow-stats {
+      display: grid;
+      grid-template-columns: repeat(6, minmax(0, 1fr));
+      gap: 10px;
+      margin-bottom: 18px;
+    }
+    .ow-stat {
+      padding: 14px;
+      border-radius: 14px;
+      border: 1px solid rgba(148, 190, 255, 0.14);
+      background: linear-gradient(160deg, rgba(11, 20, 34, 0.94), rgba(5, 10, 18, 0.94));
+      box-shadow: 0 16px 36px rgba(0, 0, 0, 0.22);
+    }
+    .ow-stat span {
+      display: block;
+      color: var(--muted-2);
+      font-size: 8px;
+      font-weight: 800;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+    }
+    .ow-stat strong {
+      display: block;
+      margin-top: 6px;
+      color: #eaf8ff;
+      font-family: var(--display);
+      font-size: 23px;
+      line-height: 1;
+    }
+    .ow-stat em { display: block; margin-top: 4px; color: var(--muted-2); font-size: 9px; font-style: normal; }
+
+    .ow-tabs {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+      padding: 6px;
+      border-radius: 14px;
+      border: 1px solid rgba(148, 190, 255, 0.12);
+      background: rgba(6, 12, 22, 0.72);
+      margin-bottom: 16px;
+    }
+    .ow-tabs button {
+      padding: 9px 15px;
+      border: 0;
+      border-radius: 10px;
+      background: transparent;
+      color: var(--muted);
+      font: inherit;
+      font-size: 11px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: 0.18s ease;
+    }
+    .ow-tabs button:hover { color: var(--text); background: rgba(0, 240, 255, 0.06); }
+    .ow-tabs button.active {
+      background: linear-gradient(120deg, rgba(0, 240, 255, 0.18), rgba(0, 217, 194, 0.12));
+      color: #eaf8ff;
+      box-shadow: inset 0 0 0 1px rgba(0, 240, 255, 0.3);
+    }
+
+    .ow-panel { display: none; }
+    .ow-panel.active { display: block; animation: owFade 0.22s ease; }
+    @keyframes owFade { from { opacity: 0; transform: translateY(4px); } }
+
+    .ow-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+    .ow-card {
+      padding: 16px;
+      border-radius: 16px;
+      border: 1px solid rgba(148, 190, 255, 0.14);
+      background: linear-gradient(160deg, rgba(9, 17, 29, 0.95), rgba(5, 10, 18, 0.95));
+      box-shadow: 0 18px 44px rgba(0, 0, 0, 0.24);
+      min-width: 0;
+    }
+    .ow-card h3 {
+      margin: 0 0 12px;
+      color: #eaf8ff;
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+    }
+    .ow-kv {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 8px;
+      font-size: 11px;
+      color: var(--muted);
+      padding: 7px 0;
+      border-bottom: 1px dashed rgba(148, 190, 255, 0.08);
+    }
+    .ow-kv:last-child { border-bottom: 0; }
+    .ow-kv strong { color: #eaf8ff; font-weight: 700; text-align: right; word-break: break-word; }
+
+    .ow-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+    .ow-table-wrap { overflow: auto; }
+    .ow-table { width: 100%; border-collapse: collapse; font-size: 11px; }
+    .ow-table th {
+      text-align: left;
+      color: var(--muted-2);
+      font-size: 8px;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      padding: 8px;
+      border-bottom: 1px solid rgba(148, 190, 255, 0.12);
+      white-space: nowrap;
+    }
+    .ow-table td {
+      padding: 9px 8px;
+      border-bottom: 1px solid rgba(148, 190, 255, 0.07);
+      color: var(--muted);
+      vertical-align: middle;
+    }
+    .ow-table td strong { color: #eaf8ff; }
+    .ow-table tr:hover td { background: rgba(0, 240, 255, 0.035); }
+
+    .ow-btn {
+      padding: 6px 10px;
+      border-radius: 8px;
+      border: 1px solid rgba(0, 240, 255, 0.24);
+      background: rgba(0, 240, 255, 0.08);
+      color: var(--cyan);
+      font: inherit;
+      font-size: 10px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: 0.18s ease;
+      white-space: nowrap;
+    }
+    .ow-btn:hover { background: rgba(0, 240, 255, 0.16); }
+    .ow-btn.danger { border-color: rgba(255, 80, 110, 0.36); background: rgba(255, 80, 110, 0.1); color: #ff8aa2; }
+    .ow-btn.danger:hover { background: rgba(255, 80, 110, 0.18); }
+    .ow-btn.ok { border-color: rgba(45, 255, 179, 0.3); background: rgba(45, 255, 179, 0.08); color: #2dffb3; }
+    .ow-btn.ok:hover { background: rgba(45, 255, 179, 0.16); }
+
+    .ow-input, .ow-select {
+      padding: 9px 11px;
+      border-radius: 9px;
+      border: 1px solid rgba(148, 190, 255, 0.18);
+      background: rgba(4, 9, 16, 0.82);
+      color: #eaf8ff;
+      font: inherit;
+      font-size: 11px;
+      outline: none;
+    }
+    .ow-input:focus, .ow-select:focus { border-color: var(--line-bright); }
+    .ow-row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+    .ow-console {
+      min-height: 170px;
+      max-height: 360px;
+      overflow: auto;
+      margin: 12px 0 0;
+      padding: 13px;
+      border-radius: 12px;
+      border: 1px solid rgba(0, 240, 255, 0.16);
+      background: #03070d;
+      color: #9fe9ff;
+      font-family: ui-monospace, Consolas, "Courier New", monospace;
+      font-size: 11px;
+      line-height: 1.6;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+    .ow-empty { color: var(--muted-2); font-size: 11px; padding: 10px 0; }
+    .ow-note { color: var(--muted-2); font-size: 10px; margin-top: 8px; }
+    .ow-status-ok { color: #2dffb3; font-weight: 800; }
+    .ow-status-bad { color: #ff8aa2; font-weight: 800; }
+    .ow-switch { display: inline-flex; align-items: center; gap: 8px; font-size: 11px; color: var(--muted); }
+    .ow-switch input { width: 16px; height: 16px; accent-color: var(--cyan); }
+
+    .ow-toast {
+      position: fixed;
+      right: 18px;
+      bottom: 18px;
+      z-index: 1200;
+      max-width: 340px;
+      padding: 12px 15px;
+      border-radius: 12px;
+      border: 1px solid rgba(0, 240, 255, 0.32);
+      background: rgba(5, 12, 20, 0.96);
+      color: #dff9ff;
+      font-size: 12px;
+      box-shadow: var(--shadow);
+      opacity: 0;
+      transform: translateY(12px);
+      pointer-events: none;
+      transition: 0.22s ease;
+    }
+    .ow-toast.show { opacity: 1; transform: translateY(0); }
+    .ow-toast.bad { border-color: rgba(255, 80, 110, 0.42); color: #ffc2cf; }
+
+    @media (max-width: 900px) {
+      .ow-stats { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+      .ow-grid { grid-template-columns: 1fr; }
+    }
+    @media (max-width: 520px) {
+      .ow-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .ow-hero h2 { font-size: 30px; }
+      .ow-tabs button { padding: 8px 10px; font-size: 10px; }
+    }
+
+    /* ---------- Maps / wipe voting ---------- */
+
+    .maps-section { border-bottom: 1px solid rgba(148, 190, 255, 0.08); }
+
+    /* ---------- Server select ---------- */
+    .maps-server-select { margin-bottom: 16px; }
+    .server-select-wrap { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; background: rgba(5, 8, 14, 0.3); padding: 12px 16px; border-radius: 12px; border: 1px solid rgba(148, 190, 255, 0.1); }
+    .server-select-label { font-size: 11px; font-weight: 700; color: var(--muted-2); text-transform: uppercase; letter-spacing: 0.06em; display: flex; align-items: center; gap: 6px; }
+    .server-select-label .icon { width: 13px; height: 13px; color: var(--cyan); }
+    .server-select {
+      flex: 1;
+      min-width: 220px;
+      background: #0b1424;
+      border: 1px solid rgba(148, 190, 255, 0.15);
+      color: #eaf7ff;
+      padding: 8px 12px;
+      border-radius: 8px;
+      font-size: 13px;
+      font-family: inherit;
+      cursor: pointer;
+      outline: none;
+    }
+    .server-select:focus { border-color: var(--cyan); }
+    .server-select option { background: #0b1424; color: #eaf7ff; padding: 8px; }
+    .server-select option[disabled] { color: var(--muted-2); }
+
+    .maps-vote,
+    .stats-maps,
+    .maps-current {
+      background: linear-gradient(160deg, rgba(16, 25, 41, 0.76), rgba(7, 12, 21, 0.92));
+      border: 1px solid rgba(148, 190, 255, 0.1);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+    }
+
+    .maps-vote {
+      position: relative;
+      overflow: hidden;
+      padding: 24px;
+    }
+    .maps-vote::before {
+      content: "";
+      position: absolute;
+      inset: 0 auto auto 0;
+      width: 100%;
+      height: 2px;
+      background: linear-gradient(90deg, transparent, var(--cyan), transparent);
+      opacity: 0.55;
+    }
+
+    .maps-vote-head,
+    .maps-archive-head,
+    .stats-maps-head {
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      gap: 20px;
+    }
+    .maps-vote-head { align-items: flex-start; margin-bottom: 20px; }
+
+    .maps-vote-head h3,
+    .maps-archive-head h3,
+    .stats-maps-head h3,
+    .maps-current-body h3 {
+      margin: 4px 0 0;
+      font-family: var(--display);
+      font-weight: 800;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+    .maps-vote-head h3 { font-size: 24px; }
+    .maps-archive-head h3 { font-size: 26px; margin: 0; }
+    .stats-maps-head h3 { font-size: 20px; margin: 0; }
+    .maps-current-body h3 { font-size: 27px; margin: 6px 0 14px; }
+    .maps-current-body h3 span { color: var(--cyan); }
+
+    .maps-vote-note { margin: 6px 0 0; max-width: 560px; color: var(--muted); font-size: 12px; line-height: 1.7; }
+    .stats-maps-head p { margin: 6px 0 0; max-width: 620px; color: var(--muted); font-size: 11px; line-height: 1.7; }
+
+    .maps-vote-meta { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; }
+    .maps-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      padding: 8px 12px;
+      border-radius: 999px;
+      border: 1px solid rgba(0, 240, 255, 0.2);
+      background: rgba(0, 240, 255, 0.06);
+      color: #dff9ff;
+      font-size: 10px;
+      font-weight: 800;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+    .maps-pill .icon { width: 13px; height: 13px; color: var(--cyan); }
+    .maps-pill b { color: var(--cyan); font-size: 14px; letter-spacing: 0; }
+    .maps-pill-deadline { border-color: rgba(255, 204, 102, 0.24); background: rgba(255, 204, 102, 0.06); color: #ffe6b0; }
+    .maps-pill-deadline .icon { color: var(--amber); }
+
+    .maps-candidates {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 14px;
+    }
+
+    .maps-candidate {
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      background: rgba(5, 8, 14, 0.46);
+      border: 1px solid rgba(148, 190, 255, 0.1);
+      border-radius: 16px;
+      transition: transform 0.3s cubic-bezier(.22, 1, .36, 1), border-color 0.25s ease, box-shadow 0.3s ease;
+    }
+    .maps-candidate:hover {
+      transform: translateY(-3px);
+      border-color: rgba(0, 240, 255, 0.28);
+      box-shadow: 0 18px 44px rgba(0, 0, 0, 0.34);
+    }
+    .maps-candidate.is-lead {
+      border-color: rgba(0, 240, 255, 0.44);
+      box-shadow: 0 0 0 1px rgba(0, 240, 255, 0.14), 0 18px 54px rgba(0, 240, 255, 0.1);
+    }
+    .maps-candidate.is-mine { background: rgba(0, 240, 255, 0.055); }
+
+    .maps-candidate-media {
+      position: relative;
+      aspect-ratio: 4 / 3;
+      overflow: hidden;
+      background: #0b3a4a;
+    }
+    .maps-candidate-media img { width: 100%; height: 100%; object-fit: cover; transition: transform 0.8s ease; }
+    .maps-candidate:hover .maps-candidate-media img { transform: scale(1.045); }
+    .maps-candidate-media::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(180deg, rgba(5, 8, 14, 0) 42%, rgba(5, 8, 14, 0.84));
+      pointer-events: none;
+    }
+    .maps-candidate-badge {
+      position: absolute;
+      z-index: 2;
+      left: 12px;
+      top: 12px;
+      padding: 5px 9px;
+      border-radius: 999px;
+      border: 1px solid rgba(0, 240, 255, 0.46);
+      background: rgba(3, 18, 24, 0.78);
+      color: #bffcff;
+      font-size: 8px;
+      font-weight: 800;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      backdrop-filter: blur(8px);
+    }
+
+    .maps-candidate-body { display: flex; flex: 1; flex-direction: column; gap: 11px; padding: 14px; }
+    .maps-candidate-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
+    .maps-candidate-name { color: #eaf7ff; font-size: 14px; font-weight: 800; line-height: 1.3; }
+    .maps-candidate-name span { color: var(--cyan); }
+    .maps-candidate-sub { margin-top: 4px; color: var(--muted-2); font-size: 10px; }
+    .maps-candidate-pct {
+      color: var(--cyan);
+      font-family: var(--display);
+      font-size: 30px;
+      font-weight: 800;
+      line-height: 1;
+      letter-spacing: -0.02em;
+    }
+    .maps-candidate.is-lead .maps-candidate-pct { color: var(--green); }
+
+    .maps-progress { height: 6px; overflow: hidden; border-radius: 999px; background: rgba(148, 190, 255, 0.12); }
+    .maps-progress i {
+      display: block;
+      height: 100%;
+      border-radius: inherit;
+      background: linear-gradient(90deg, #009dff, #00f0ff);
+      box-shadow: 0 0 12px rgba(0, 240, 255, 0.34);
+      transition: width 0.5s ease;
+    }
+    .maps-candidate.is-lead .maps-progress i { background: linear-gradient(90deg, #00f0ff, #45f0a0); }
+
+    .maps-vote-btn { width: 100%; min-height: 40px; margin-top: auto; }
+    .maps-vote-btn.is-mine {
+      color: var(--green);
+      background: rgba(69, 240, 160, 0.08);
+      border: 1px solid rgba(69, 240, 160, 0.3);
+      box-shadow: none;
+      cursor: default;
+    }
+    .maps-vote-btn.is-loading { opacity: 0.6; pointer-events: none; }
+
+    .maps-vote-foot {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      margin-top: 16px;
+      padding-top: 14px;
+      border-top: 1px solid rgba(148, 190, 255, 0.08);
+      color: var(--muted-2);
+      font-size: 10px;
+    }
+    .maps-vote-foot span { display: inline-flex; align-items: center; gap: 8px; }
+    .maps-vote-foot .icon { width: 13px; height: 13px; color: var(--green); }
+    .maps-link { display: inline-flex; align-items: center; gap: 6px; color: var(--cyan); font-size: 10px; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; }
+    .maps-link .icon { width: 13px; height: 13px; }
+
+    .maps-empty {
+      grid-column: 1 / -1;
+      padding: 34px 18px;
+      border: 1px dashed rgba(148, 190, 255, 0.16);
+      border-radius: 14px;
+      color: var(--muted);
+      font-size: 12px;
+      text-align: center;
+    }
+
+    .maps-current {
+      display: grid;
+      grid-template-columns: 280px minmax(0, 1fr);
+      align-items: center;
+      gap: 24px;
+      margin-top: 16px;
+      padding: 18px;
+    }
+    .maps-current-media {
+      overflow: hidden;
+      aspect-ratio: 1;
+      border: 1px solid rgba(148, 190, 255, 0.12);
+      border-radius: 14px;
+      background: #0b3a4a;
+    }
+    .maps-current-media img { width: 100%; height: 100%; object-fit: cover; transition: transform 1s ease; }
+    .maps-current-media:hover img { transform: scale(1.04); }
+    .maps-current-body { min-width: 0; }
+
+    .maps-facts { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+    .maps-fact {
+      padding: 10px 12px;
+      border: 1px solid rgba(148, 190, 255, 0.07);
+      border-radius: 10px;
+      background: rgba(5, 8, 14, 0.44);
+    }
+    .maps-fact > span {
+      display: block;
+      margin-bottom: 4px;
+      color: var(--muted-2);
+      font-size: 8px;
+      font-weight: 800;
+      letter-spacing: 0.11em;
+      text-transform: uppercase;
+    }
+    .maps-fact strong { color: #eaf7ff; font-family: var(--display); font-size: 16px; font-weight: 700; }
+    .maps-seed { display: inline-flex; align-items: center; gap: 6px; padding: 0; border: 0; background: none; cursor: pointer; }
+    .maps-seed strong { color: var(--cyan); font-size: 14px; }
+    .maps-seed .icon { width: 13px; height: 13px; color: var(--muted); transition: color 0.2s ease; }
+    .maps-seed:hover .icon { color: var(--cyan); }
+    .maps-current-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 14px; }
+
+    .maps-archive { margin-top: 28px; }
+    .maps-archive-head { margin-bottom: 12px; }
+    .maps-archive-head > div { min-width: 0; }
+    .maps-archive-list {
+      overflow: hidden;
+      border: 1px solid rgba(148, 190, 255, 0.1);
+      border-radius: 16px;
+      background: rgba(10, 15, 24, 0.55);
+    }
+    .maps-archive-row {
+      display: grid;
+      grid-template-columns: 64px minmax(0, 1fr) 100px 150px 120px;
+      align-items: center;
+      gap: 16px;
+      padding: 12px 16px;
+    }
+    .maps-archive-row + .maps-archive-row { border-top: 1px solid rgba(148, 190, 255, 0.07); }
+    .maps-archive-thumb { width: 64px; height: 44px; overflow: hidden; border-radius: 8px; background: #0b3a4a; }
+    .maps-archive-thumb img { width: 100%; height: 100%; object-fit: cover; }
+    .maps-archive-date strong { display: block; color: #eaf7ff; font-size: 13px; font-weight: 700; }
+    .maps-archive-date span { display: block; margin-top: 2px; color: var(--muted-2); font-size: 9px; }
+    .maps-archive-size, .maps-archive-seed { color: var(--muted); font-size: 10px; }
+    .maps-archive-link { justify-self: end; display: inline-flex; align-items: center; gap: 6px; color: var(--cyan); font-size: 10px; font-weight: 800; letter-spacing: 0.05em; text-transform: uppercase; }
+    .maps-archive-link .icon { width: 12px; height: 12px; }
+
+    /* ---------- Stats maps teaser ---------- */
+
+    .stats-maps { margin-top: 12px; padding: 20px 22px; }
+    .stats-maps-head { margin-bottom: 16px; }
+    .stats-maps-grid { display: grid; grid-template-columns: minmax(0, 0.92fr) minmax(0, 1.08fr); gap: 12px; }
+    .stats-map-current {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px;
+      border: 1px solid rgba(148, 190, 255, 0.08);
+      border-radius: 12px;
+      background: rgba(5, 8, 14, 0.44);
+    }
+    .stats-map-current img { width: 86px; height: 86px; flex: 0 0 auto; object-fit: cover; border: 1px solid rgba(148, 190, 255, 0.14); border-radius: 10px; }
+    .stats-map-current strong { display: block; color: #eaf7ff; font-family: var(--display); font-size: 18px; letter-spacing: 0.03em; }
+    .stats-map-current strong span { color: var(--cyan); }
+    .stats-map-current small { display: block; margin-top: 4px; color: var(--muted); font-size: 10px; line-height: 1.6; }
+    .stats-map-votes { display: grid; gap: 9px; padding: 12px; border: 1px solid rgba(148, 190, 255, 0.08); border-radius: 12px; background: rgba(5, 8, 14, 0.44); }
+    .stats-map-vote-row { display: grid; gap: 5px; }
+    .stats-map-vote-top { display: flex; justify-content: space-between; gap: 10px; color: #dcecff; font-size: 10px; font-weight: 700; }
+    .stats-map-vote-top b { color: var(--cyan); }
+    .stats-map-vote-bar { height: 5px; overflow: hidden; border-radius: 999px; background: rgba(148, 190, 255, 0.12); }
+    .stats-map-vote-bar i { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, #009dff, #00f0ff); }
+
+    /* Keep the extra nav item from overflowing on laptops. */
+    @media (max-width: 1180px) {
+      .nav-links { gap: 2px; }
+      .nav-links a { padding: 9px 9px; font-size: 11px; }
+    }
+
+    @media (max-width: 1024px) {
+      .maps-candidates { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .maps-current { grid-template-columns: 220px minmax(0, 1fr); }
+      .maps-facts { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .stats-maps-grid { grid-template-columns: 1fr; }
+    }
+
+    @media (max-width: 700px) {
+      .maps-candidates { grid-template-columns: 1fr; }
+      .maps-current { grid-template-columns: 1fr; }
+      .maps-current-media { max-width: 320px; }
+      .maps-vote-head, .maps-vote-foot, .stats-maps-head { flex-direction: column; align-items: flex-start; }
+      .maps-vote-meta { justify-content: flex-start; }
+      .maps-archive-row { grid-template-columns: 56px minmax(0, 1fr) auto; gap: 12px; padding: 11px 12px; }
+      .maps-archive-row > :nth-child(3), .maps-archive-row > :nth-child(4) { display: none; }
+    }
   </style>
 </head>
 <body>
@@ -3173,6 +3763,7 @@
           <a href="#/server" data-nav="server"><svg class="icon"><use href="#i-server"/></svg><span data-i18n="nav_server">Сервер</span></a>
           <a href="#/store" data-nav="store"><svg class="icon"><use href="#i-cart"/></svg><span data-i18n="nav_store">Магазин</span></a>
           <a href="#/stats" data-nav="stats"><svg class="icon"><use href="#i-chart"/></svg><span data-i18n="nav_stats">Статистика</span></a>
+          <a href="#/maps" data-nav="maps"><svg class="icon"><use href="#i-map"/></svg><span data-i18n="nav_maps">Мапи</span></a>
           <a href="#/rules" data-nav="rules"><svg class="icon"><use href="#i-shield"/></svg><span data-i18n="nav_rules">Правила</span></a>
           <a href="#/cabinet" data-nav="cabinet"><svg class="icon"><use href="#i-ticket"/></svg><span>Тікет</span></a>
         </nav>
@@ -3213,6 +3804,7 @@
               <a href="#/history" role="menuitem"><svg class="icon"><use href="#i-history"/></svg> <span data-i18n="menu_history">Історія покупок</span></a>
               <a href="#/links" role="menuitem"><svg class="icon"><use href="#i-link"/></svg> <span data-i18n="menu_links">Мої прив'язки</span></a>
               <a href="#/cabinet" data-nav="cabinet" role="menuitem"><svg class="icon"><use href="#i-user"/></svg> <span data-i18n="menu_cabinet">Личний кабінет</span></a>
+              <a href="#/owner" role="menuitem" id="menuOwnerPanel" hidden><svg class="icon"><use href="#i-shield"/></svg> <span>Панель власника</span></a>
               <a href="#/apply" role="menuitem"><svg class="icon"><use href="#i-ticket"/></svg> <span data-i18n="menu_apply">Подати заявку</span></a>
               <button type="button" id="profileLogoutBtn" role="menuitem"><svg class="icon"><use href="#i-logout"/></svg> <span data-i18n="menu_logout">Вихід</span></button>
             </div>
@@ -3229,6 +3821,7 @@
         <a href="#/server" data-nav="server">Сервер</a>
         <a href="#/store" data-nav="store">Магазин</a>
         <a href="#/stats" data-nav="stats">Статистика</a>
+        <a href="#/maps" data-nav="maps">Мапи</a>
         <a href="#/rules" data-nav="rules">Правила</a>
         <a href="#/cabinet" data-nav="cabinet">Кабінет</a>
         <a href="https://discord.gg/tgPFwngPer" target="_blank" rel="noopener">Discord ↗</a>
@@ -3317,7 +3910,7 @@
             <h3>UNITY RUST <span class="server-tag">| X2 | EU</span></h3>
             <div class="server-progress"><span id="homeServerBar" style="width:0%"></span></div>
             <div class="server-card-bottom">
-              <code>client.connect malls-shifting.tun.ply.gg:41553</code>
+              <code>client.connect 185.36.205.224:28065</code>
               <button class="server-copy" type="button" data-copy aria-label="Скопіювати IP"><svg class="icon"><use href="#i-copy"/></svg></button>
             </div>
             <div class="server-card-meta">
@@ -3445,7 +4038,7 @@
                     <span>F1</span>
                   </div>
                   <div class="connect-row">
-                    <code id="connectCommand">client.connect malls-shifting.tun.ply.gg:41553</code>
+                    <code id="connectCommand">client.connect 185.36.205.224:28065</code>
                     <button class="copy-btn" type="button" data-copy aria-label="Скопіювати команду підключення">
                       <svg class="icon"><use href="#i-copy"/></svg>
                     </button>
@@ -3584,9 +4177,92 @@
             </div>
           </div>
         </div>
+
+        <div class="stats-maps reveal" id="statsMapsPanel">
+          <div class="stats-maps-head">
+            <div>
+              <span class="kicker">Мапа сервера</span>
+              <h3>ГОЛОСУВАННЯ ЗА НАСТУПНУ МАПУ</h3>
+              <p>Поточна мапа, лідери голосування та повний список варіантів на сторінці «Мапи».</p>
+            </div>
+            <a class="btn btn-primary" href="#/maps">Голосувати <svg class="icon"><use href="#i-arrow"/></svg></a>
+          </div>
+          <div class="stats-maps-grid">
+            <div class="stats-map-current" id="statsMapCurrent">Завантажуємо мапу…</div>
+            <div class="stats-map-votes" id="statsMapVotes">Завантажуємо голоси…</div>
+          </div>
+        </div>
       </div>
     </section>
     </div><!-- /page stats -->
+
+    <div class="page" data-page="maps">
+    <!-- ================= MAPS ================= -->
+    <section class="section maps-section" id="maps">
+      <div class="container">
+        <div class="section-head reveal">
+          <div class="copy">
+            <span class="kicker">Карти сервера</span>
+            <h2>ОБЕРИ <span class="accent">НАСТУПНУ МАПУ</span></h2>
+          </div>
+          <p>Голосуй за мапу наступного вайпу. Один голос на учасника — змінити вибір можна до завершення голосування.</p>
+        </div>
+
+        <div class="maps-server-select reveal" id="mapsServerSelect">
+          <div class="server-select-wrap reveal">
+            <label class="server-select-label">
+              <svg class="icon"><use href="#i-server"/></svg>
+              <span>Обери сервер для голосування:</span>
+            </label>
+            <select class="server-select" id="mapsServerSelectInput">
+              <option value="nexus">UNITY RUST | X2 | EU (живий)</option>
+              <option value="nexus-x3">UNITY RUST | X3 | EU (в розробці)</option>
+              <option value="nexus-x5">UNITY RUST | X5 | EU (в розробці)</option>
+              <option value="nexus-x10">UNITY RUST | X10 | EU (в розробці)</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="maps-vote reveal" id="mapsVotePanel">
+          <div class="maps-vote-head">
+            <div>
+              <span class="kicker">Голосування</span>
+              <h3>НАСТУПНА МАПА</h3>
+              <p class="maps-vote-note" id="mapsVoteNote">Завантажуємо варіанти…</p>
+            </div>
+            <div class="maps-vote-meta">
+              <span class="maps-pill" id="mapsVoteTotal"><svg class="icon"><use href="#i-users"/></svg><b>0</b> голосів</span>
+              <span class="maps-pill maps-pill-deadline" id="mapsVoteDeadline" hidden><svg class="icon"><use href="#i-clock"/></svg><span></span></span>
+            </div>
+          </div>
+          <div class="maps-candidates" id="mapsCandidates">
+            <div class="maps-empty">Завантажуємо мапи…</div>
+          </div>
+          <div class="maps-vote-foot">
+            <span><svg class="icon"><use href="#i-shield"/></svg> Голос зберігається за акаунтом або браузером. Змінити вибір можна до завершення голосування.</span>
+            <a class="maps-link" href="#/rules">Правила <svg class="icon"><use href="#i-arrow"/></svg></a>
+          </div>
+        </div>
+
+        <div class="maps-current reveal" id="mapsCurrent">
+          <div class="maps-empty">Завантажуємо поточну мапу…</div>
+        </div>
+
+        <div class="maps-archive reveal">
+          <div class="maps-archive-head">
+            <div>
+              <span class="kicker">Історія</span>
+              <h3>МИНУЛІ ВАЙПИ</h3>
+            </div>
+            <span class="maps-pill" id="mapsArchiveCount">0 мап</span>
+          </div>
+          <div class="maps-archive-list" id="mapsArchiveList">
+            <div class="maps-empty">Завантажуємо архів…</div>
+          </div>
+        </div>
+      </div>
+    </section>
+    </div><!-- /page maps -->
 
     <div class="page" data-page="rules">
     <!-- ================= RULES ================= -->
@@ -3624,6 +4300,7 @@
               <div class="copy">
                 <span class="kicker">Підтримка</span>
                 <h2 id="cabinetHeading">КАБІНЕТ</h2>
+                <a class="btn btn-primary" href="#/owner" id="openOwnerPanelBtn" hidden style="margin-top:12px">Панель власника</a>
               </div>
               <p>Статус заявки, твоя роль і доступні інструменти керування.</p>
             </div>
@@ -3805,7 +4482,7 @@
 
                   <h4>Тестовий сервер</h4>
                   <div class="promo-box">
-                    <span>connect malls-shifting.tun.ply.gg:41553</span>
+                    <span>connect 185.36.205.224:28065</span>
                     <button class="btn btn-ghost btn-sm" type="button" data-copy>Копіювати</button>
                   </div>
                 </div>
@@ -4262,6 +4939,341 @@
     </section>
     </div><!-- /page links -->
 
+    <div class="page" data-page="owner">
+      <section class="section section-tight ow-page">
+        <div class="container">
+          <div class="ow-hero">
+            <div>
+              <span class="kicker">Власник · локальний режим</span>
+              <h2>ПАНЕЛЬ <span class="accent">ВЛАСНИКА</span></h2>
+              <p>Повне керування сервером UNITY RUST без пароля. Доступ відкритий лише з локальної мережі — будь-який пристрій у Wi-Fi бачить тебе як власника.</p>
+            </div>
+            <div class="ow-hero-actions">
+              <span class="ow-live">локальний доступ</span>
+              <button class="btn btn-ghost" type="button" id="owRefresh">Оновити</button>
+            </div>
+          </div>
+
+          <div class="ow-stats">
+            <div class="ow-stat"><span>Онлайн</span><strong id="owOnline">—</strong><em id="owUptime">—</em></div>
+            <div class="ow-stat"><span>Гравці</span><strong id="owPlayersCount">—</strong><em>у списку</em></div>
+            <div class="ow-stat"><span>Тікети</span><strong id="owTickets">—</strong><em id="owTicketsSub">нові / всього</em></div>
+            <div class="ow-stat"><span>Скарги</span><strong id="owReports">—</strong><em id="owReportsSub">відкриті / всього</em></div>
+            <div class="ow-stat"><span>Бани</span><strong id="owBans">—</strong><em>у базі</em></div>
+            <div class="ow-stat"><span>Персонал</span><strong id="owStaff">—</strong><em>акаунтів</em></div>
+          </div>
+
+          <div class="ow-tabs" id="owTabs">
+            <button class="active" type="button" data-ow-tab="overview">Огляд</button>
+            <button type="button" data-ow-tab="players">Гравці</button>
+            <button type="button" data-ow-tab="rcon">RCON-консоль</button>
+            <button type="button" data-ow-tab="staff">Персонал</button>
+            <button type="button" data-ow-tab="shop">Магазин</button>
+            <button type="button" data-ow-tab="moderation">Модерація</button>
+            <button type="button" data-ow-tab="commands">Команди</button>
+            <button type="button" data-ow-tab="tags">Теги ролей</button>
+          </div>
+
+          <div class="ow-panel active" data-ow-panel="overview">
+            <div class="ow-grid">
+              <div class="ow-card">
+                <h3>Сервер</h3>
+                <div id="owServerInfo"></div>
+              </div>
+              <div class="ow-card">
+                <h3>Швидкі дії</h3>
+                <div class="ow-actions">
+                  <button class="ow-btn ok" type="button" data-ow-cmd="server.save">Зберегти світ</button>
+                  <button class="ow-btn" type="button" data-ow-cmd="serverinfo">Інфо сервера</button>
+                  <button class="ow-btn" type="button" data-ow-cmd="players">Список гравців</button>
+                  <button class="ow-btn" type="button" data-ow-cmd="server.users">Сесії</button>
+                </div>
+                <div class="ow-row" style="margin-top:12px">
+                  <input class="ow-input" id="owBroadcast" placeholder="Повідомлення в ігровий чат..." style="flex:1;min-width:190px" autocomplete="off">
+                  <button class="ow-btn ok" type="button" id="owBroadcastBtn">Надіслати</button>
+                </div>
+                <div class="ow-note">Повідомлення піде всім онлайн-гравцям через RCON.</div>
+              </div>
+              <div class="ow-card" style="grid-column:1/-1">
+                <h3>Останні скарги</h3>
+                <div class="ow-table-wrap">
+                  <table class="ow-table">
+                    <thead><tr><th>Ціль</th><th>Порушення</th><th>Причина</th><th>Статус</th><th>Коли</th></tr></thead>
+                    <tbody id="owRecentReports"></tbody>
+                  </table>
+                </div>
+                <div class="ow-empty" id="owRecentReportsEmpty" hidden>Скарг ще немає.</div>
+              </div>
+              <div class="ow-card" style="grid-column:1/-1">
+                <h3>Авто-об'яви в грі</h3>
+                <div class="ow-row" style="margin-bottom:10px">
+                  <label class="ow-switch"><input type="checkbox" id="owAnnEnabled"> Увімкнено</label>
+                  <input class="ow-input" id="owAnnInterval" type="number" min="1" max="180" value="10" style="width:100px" title="Інтервал, хвилин">
+                  <span class="ow-note" style="margin:0">хвилин між повідомленнями</span>
+                  <button class="ow-btn ok" type="button" id="owAnnSave">Зберегти</button>
+                  <button class="ow-btn" type="button" id="owAnnTest">Перевірити зараз</button>
+                </div>
+                <textarea class="ow-input" id="owAnnMessages" rows="4" style="width:100%;resize:vertical" placeholder="Одне повідомлення на рядок"></textarea>
+                <div class="ow-note">Наприклад: «Подавай жалобу на нарушителей через /report». Сайт сам пише це в чат, коли є онлайн.</div>
+              </div>
+              <div class="ow-card" style="grid-column:1/-1">
+                <h3>Керування сервером</h3>
+                <div class="ow-row" style="margin-bottom:10px; gap:8px; flex-wrap:wrap">
+                  <span id="owServerStatus" style="font-weight:800; color:var(--muted-2)">статус…</span>
+                  <button class="ow-btn ok" type="button" id="owServerStart">▶ Запустити</button>
+                  <button class="ow-btn danger" type="button" id="owServerStop">⏹ Зупинити</button>
+                  <button class="ow-btn" type="button" id="owServerRestart">🔄 Перезапустити</button>
+                  <button class="ow-btn ok" type="button" data-ow-cmd="server.save">💾 Зберегти світ</button>
+                  <button class="ow-btn" type="button" data-ow-cmd="serverinfo">ℹ Інфо сервера</button>
+                  <button class="ow-btn" type="button" id="owServerStatusRefresh">⟳ Статус</button>
+                </div>
+                <div class="ow-note">Запуск / зупинка / перезапуск RustDedicated.exe на цьому ПК. Збереження та інфо через RCON.</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="ow-panel" data-ow-panel="players">
+            <div class="ow-card">
+              <div class="ow-row" style="justify-content:space-between;margin-bottom:10px">
+                <h3 style="margin:0">Онлайн-гравці</h3>
+                <button class="ow-btn" type="button" id="owPlayersRefresh">Оновити</button>
+              </div>
+              <div class="ow-table-wrap">
+                <table class="ow-table">
+                  <thead><tr><th>Гравець</th><th>SteamID</th><th>Ping</th><th>Час</th><th>Дії</th></tr></thead>
+                  <tbody id="owPlayersTable"></tbody>
+                </table>
+              </div>
+              <div class="ow-empty" id="owPlayersEmpty" hidden>Нікого немає онлайн.</div>
+            </div>
+          </div>
+
+          <div class="ow-panel" data-ow-panel="rcon">
+            <div class="ow-card">
+              <h3>RCON-консоль</h3>
+              <div class="ow-row" style="margin-bottom:10px">
+                <button class="ow-btn ok" type="button" data-ow-cmd="server.save">Зберегти світ</button>
+                <button class="ow-btn" type="button" data-ow-cmd="serverinfo">Інфо сервера</button>
+                <button class="ow-btn" type="button" data-ow-cmd="players">Гравці</button>
+                <button class="ow-btn" type="button" data-ow-cmd="server.users">Сесії</button>
+                <button class="ow-btn" type="button" data-ow-cmd="status">Статус</button>
+                <button class="ow-btn" type="button" data-ow-cmd="bans">Бани</button>
+              </div>
+              <div class="ow-row" style="margin-bottom:8px">
+                <button class="ow-btn" type="button" data-ow-cmd="time">Час</button>
+                <button class="ow-btn" type="button" data-ow-cmd="weather">Погода</button>
+                <button class="ow-btn" type="button" data-ow-cmd="say">Оголошення</button>
+                <button class="ow-btn" type="button" data-ow-cmd="kick">Кік</button>
+                <button class="ow-btn" type="button" data-ow-cmd="ban">Бан</button>
+                <button class="ow-btn" type="button" data-ow-cmd="unban">Зняти бан</button>
+              </div>
+              <div class="ow-row">
+                <input class="ow-input" id="owRconInput" placeholder="Команда, наприклад: say Привіт" style="flex:1;min-width:200px" autocomplete="off">
+                <button class="ow-btn ok" type="button" id="owRconRun">Виконати</button>
+              </div>
+              <pre class="ow-console" id="owRconOut">Готово. Введи команду вище або натисни швидку кнопку.</pre>
+            </div>
+          </div>
+
+          <div class="ow-panel" data-ow-panel="staff">
+            <div class="ow-card" style="margin-bottom:12px">
+              <h3>Персонал</h3>
+              <div class="ow-row" style="margin-bottom:12px">
+                <input class="ow-input" id="owStaffSteam" placeholder="SteamID64" style="min-width:190px" autocomplete="off">
+                <input class="ow-input" id="owStaffDiscord" placeholder="Discord (нік)" style="min-width:150px" autocomplete="off">
+                <select class="ow-select" id="owStaffRole">
+                  <option value="moderator">Модератор</option>
+                  <option value="admin">Адмін</option>
+                  <option value="media">Медіа</option>
+                  <option value="other">Інше</option>
+                </select>
+                <button class="ow-btn ok" type="button" id="owStaffAdd">Додати</button>
+              </div>
+              <div class="ow-table-wrap">
+                <table class="ow-table">
+                  <thead><tr><th>SteamID</th><th>Discord</th><th>Роль</th><th>Статус</th><th></th></tr></thead>
+                  <tbody id="owStaffTable"></tbody>
+                </table>
+              </div>
+              <div class="ow-empty" id="owStaffEmpty" hidden>Персоналу ще немає.</div>
+            </div>
+            <div class="ow-card" style="margin-bottom:12px">
+              <h3>Заявки</h3>
+              <div class="ow-table-wrap">
+                <table class="ow-table">
+                  <thead><tr><th>SteamID</th><th>Роль</th><th>Статус</th><th>Дії</th></tr></thead>
+                  <tbody id="owTicketsTable"></tbody>
+                </table>
+              </div>
+              <div class="ow-empty" id="owTicketsEmpty" hidden>Заявок немає.</div>
+            </div>
+            <div class="ow-card">
+              <h3>Акаунти</h3>
+              <div class="ow-table-wrap">
+                <table class="ow-table">
+                  <thead><tr><th>SteamID</th><th>Discord</th><th>Прив'язка</th><th>Створено</th></tr></thead>
+                  <tbody id="owAccountsTable"></tbody>
+                </table>
+              </div>
+              <div class="ow-empty" id="owAccountsEmpty" hidden>Акаунтів немає.</div>
+            </div>
+          </div>
+
+          <div class="ow-panel" data-ow-panel="shop">
+            <div class="ow-card" style="margin-bottom:12px">
+              <h3>Створити промокод</h3>
+              <div class="ow-row">
+                <input class="ow-input" id="owPromoCode" placeholder="КОД" maxlength="20" autocomplete="off">
+                <input class="ow-input" id="owPromoMax" type="number" min="1" value="50" style="width:110px" placeholder="Активацій">
+                <input class="ow-input" id="owPromoDesc" placeholder="Опис (необов'язково)" style="flex:1;min-width:190px" autocomplete="off">
+                <button class="ow-btn ok" type="button" id="owPromoCreate">Створити</button>
+              </div>
+            </div>
+            <div class="ow-card" style="margin-bottom:12px">
+              <h3>Промокоди</h3>
+              <div class="ow-table-wrap">
+                <table class="ow-table">
+                  <thead><tr><th>Код</th><th>Опис</th><th>Активації</th><th>Створено</th></tr></thead>
+                  <tbody id="owPromosTable"></tbody>
+                </table>
+              </div>
+              <div class="ow-empty" id="owPromosEmpty" hidden>Промокодів немає.</div>
+            </div>
+            <div class="ow-card" style="margin-bottom:12px">
+              <h3>Покупки</h3>
+              <div class="ow-table-wrap">
+                <table class="ow-table">
+                  <thead><tr><th>Гравець</th><th>Товар</th><th>Сума</th><th>Статус</th><th>Коли</th></tr></thead>
+                  <tbody id="owPurchasesTable"></tbody>
+                </table>
+              </div>
+              <div class="ow-empty" id="owPurchasesEmpty" hidden>Покупок немає.</div>
+            </div>
+            <div class="ow-card">
+              <h3>Активації промокодів</h3>
+              <div class="ow-table-wrap">
+                <table class="ow-table">
+                  <thead><tr><th>SteamID</th><th>Промокод</th><th>Коли</th></tr></thead>
+                  <tbody id="owActivationsTable"></tbody>
+                </table>
+              </div>
+              <div class="ow-empty" id="owActivationsEmpty" hidden>Активацій немає.</div>
+            </div>
+          </div>
+
+          <div class="ow-panel" data-ow-panel="moderation">
+            <div class="ow-card" style="margin-bottom:12px">
+              <h3>Бани</h3>
+              <div class="ow-table-wrap">
+                <table class="ow-table">
+                  <thead><tr><th>Гравець</th><th>Причина</th><th>Адмін</th><th>Коли</th><th></th></tr></thead>
+                  <tbody id="owBansTable"></tbody>
+                </table>
+              </div>
+              <div class="ow-empty" id="owBansEmpty" hidden>Банів немає.</div>
+            </div>
+            <div class="ow-card" style="margin-bottom:12px">
+              <h3>Скарги</h3>
+              <div class="ow-table-wrap">
+                <table class="ow-table">
+                  <thead><tr><th>Ціль</th><th>Причина</th><th>Статус</th><th>Коли</th><th></th></tr></thead>
+                  <tbody id="owReportsTable"></tbody>
+                </table>
+              </div>
+              <div class="ow-empty" id="owReportsEmpty" hidden>Скарг немає.</div>
+            </div>
+            <div class="ow-card">
+              <h3>Логи адміністрації</h3>
+              <div class="ow-table-wrap">
+                <table class="ow-table">
+                  <thead><tr><th>Дія</th><th>Ціль</th><th>Деталі</th><th>Коли</th></tr></thead>
+                  <tbody id="owLogsTable"></tbody>
+                </table>
+              </div>
+              <div class="ow-empty" id="owLogsEmpty" hidden>Логів немає.</div>
+            </div>
+          </div>
+          <div class="ow-panel" data-ow-panel="commands">
+            <div class="ow-card" style="margin-bottom:12px">
+              <h3>Швидкі команди RCON</h3>
+              <p class="ow-note">Натисни кнопку — команда виконається на сервері одразу. Для команд з аргументом з'явиться вікно вводу.</p>
+              <div class="ow-actions" style="flex-wrap:wrap">
+                <button class="ow-btn ok" type="button" data-ow-cmd="server.save">💾 Зберегти світ</button>
+                <button class="ow-btn" type="button" data-ow-cmd="serverinfo">ℹ Інфо сервера</button>
+                <button class="ow-btn" type="button" data-ow-cmd="players">👥 Гравці</button>
+                <button class="ow-btn" type="button" data-ow-cmd="status">📊 Статус</button>
+                <button class="ow-btn" type="button" data-ow-cmd="bans">🔨 Бани</button>
+                <button class="ow-btn" type="button" data-ow-cmd="server.users">🔗 Сесії</button>
+                <button class="ow-btn" type="button" data-ow-cmd="time">🕐 Час</button>
+                <button class="ow-btn" type="button" data-ow-cmd="weather">🌤 Погода</button>
+                <button class="ow-btn" type="button" data-ow-cmd="say">📢 Оголошення</button>
+                <button class="ow-btn danger" type="button" data-ow-cmd="kick">🦶 Кік</button>
+                <button class="ow-btn danger" type="button" data-ow-cmd="ban">🚫 Бан</button>
+                <button class="ow-btn ok" type="button" data-ow-cmd="unban">✅ Зняти бан</button>
+                <button class="ow-btn" type="button" data-ow-cmd="modid">🛡 Mod ID</button>
+                <button class="ow-btn ok" type="button" data-ow-cmd="ownerid">👑 Owner ID</button>
+                <button class="ow-btn" type="button" data-ow-cmd="middleid">⭐ Middle ID</button>
+              </div>
+            </div>
+            <div class="ow-card">
+              <h3>Власна команда + історія</h3>
+              <div class="ow-row">
+                <input class="ow-input" id="owCustomCmd" placeholder="Введи будь-яку RCON-команду..." style="flex:1;min-width:250px" autocomplete="off">
+                <button class="ow-btn ok" type="button" id="owCustomCmdRun">Виконати</button>
+              </div>
+              <div class="ow-note">Приклад: <code>say Привіт всім!</code> або <code>kick "ПоганийГравець" "Порушення правил"</code></div>
+              <div class="ow-table-wrap" style="margin-top:10px; max-height:200px; overflow:auto;">
+                <table class="ow-table">
+                  <thead><tr><th>Команда</th><th>Відповідь сервера</th><th>Коли</th></tr></thead>
+                  <tbody id="owCmdHistory"></tbody>
+                </table>
+              </div>
+              <div class="ow-empty" id="owCmdHistoryEmpty" hidden>Історія порожня.</div>
+            </div>
+          </div>
+          <div class="ow-panel" data-ow-panel="tags">
+            <div class="ow-card" style="margin-bottom:12px">
+              <h3>Теги ролей для чат-плагіна</h3>
+              <p class="ow-note">Збережіть тег для кожної ролі. Теги показуються біля ніку у грі лише через Oxide-плагін (наприклад Chat Tags). Сайт зберігає конфіг і може виконати RCON-команду призначення.</p>
+              <div class="ow-table-wrap">
+                <table class="ow-table">
+                  <thead><tr><th>Роль</th><th>Тег</th><th>Колір</th><th></th></tr></thead>
+                  <tbody id="owTagsTable"></tbody>
+                </table>
+              </div>
+              <div class="ow-row" style="margin-top:10px">
+                <label style="font-size:10px; color:var(--muted-2); margin-right:8px">Шаблон RCON-команди:</label>
+                <input class="ow-input" type="text" value="chat.tags add {steamId} {tag}" data-tag-template placeholder="chat.tags add {steamId} {tag}" style="flex:1;min-width:220px" autocomplete="off">
+                <span class="ow-note" style="margin:0 0 0 8px">заміни {steamId} і {tag} під свій плагін</span>
+              </div>
+              <div class="ow-actions" style="margin-top:10px">
+                <button class="ow-btn ok" type="button" id="owTagsSave">Зберегти конфіг тегів</button>
+                <button class="ow-btn" type="button" id="owTagsReset">До типових</button>
+              </div>
+              <div class="ow-note">Приклад типового конфігу: moderator → MDRT (жовтий), media → MEDIA (блакитний).</div>
+            </div>
+            <div class="ow-card">
+              <h3>Видати тег гравцеві на сервері</h3>
+              <div class="ow-row">
+                <input class="ow-input" id="owTagSteam" placeholder="SteamID64 гравця" style="flex:1;min-width:220px" autocomplete="off">
+                <select class="ow-select" id="owTagRole" style="min-width:150px">
+                  <option value="moderator">Модератор (MDRT)</option>
+                  <option value="media">Медіа (MEDIA)</option>
+                  <option value="admin">Адмін (ADMIN)</option>
+                  <option value="owner">Власник (OWNER)</option>
+                  <option value="other">Інша роль</option>
+                </select>
+                <input class="ow-input" id="owTagCustom" placeholder="Власний тег..." style="flex:1;min-width:130px" autocomplete="off">
+                <button class="ow-btn ok" type="button" id="owTagAssign">Призначити через RCON</button>
+              </div>
+              <div class="ow-note">Команда береться з налаштувань вище (за замовчуванням: <code>chat.tags add {steamId} {tag}</code>). Змініть шаблон, якщо ваш плагін використовує іншу команду.</div>
+            </div>
+          </div>
+        </div>
+      </section>
+      <div class="ow-toast" id="owToast"></div>
+    </div>
+
     <div class="page" data-page="control">
     <!-- ================= ADMIN PANEL ================= -->
     <section class="section section-tight admin-section" id="admin">
@@ -4278,10 +5290,10 @@
           <div class="ban-empty admin-gate" id="adminGate">
             <svg class="icon"><use href="#i-lock"/></svg>
             <strong>Панель адміністратора закрита</strong>
-            <span>Увійди як адмін, щоб переглядати бан-лист і застосовувати бани. Потрібен Steam- або Discord-акаунт адміністрації.</span>
+            <span>Увійди як адмін, щоб переглядати бан-лист і застосовувати бани. Локально — паролем адміністратора.</span>
             <button class="btn btn-primary admin-login-btn" type="button" id="adminLoginBtn">
-              <svg class="icon"><use href="#i-steam"/></svg>
-              <span>Увійти як адмін</span>
+              <svg class="icon"><use href="#i-lock"/></svg>
+              <span>Увійти за паролем</span>
             </button>
           </div>
 
@@ -4484,7 +5496,7 @@
       "use strict";
 
       // ▼▼▼ ЗМІНИ АДРЕСУ ПІДКЛЮЧЕННЯ ТУТ ▼▼▼
-      const CONNECT_COMMAND = "client.connect malls-shifting.tun.ply.gg:41553";
+      const CONNECT_COMMAND = "client.connect 185.36.205.224:28065";
       // ▲▲▲ ЗМІНИ АДРЕСУ ПІДКЛЮЧЕННЯ ТУТ ▲▲▲
 
       const toast = document.getElementById("toast");
@@ -4536,6 +5548,12 @@
         .then((info) => {
           if (!info) return;
           siteInfo = info;
+          if (info.localOwnerLogin) {
+            const gateText = document.querySelector("#cabinetGate span");
+            if (gateText) gateText.textContent = "Локальний режим: увійди паролем адміністратора, щоб відкрити кабінет власника.";
+            const gateBtn = document.getElementById("cabinetLoginBtn");
+            if (gateBtn) gateBtn.textContent = "Увійти як власник";
+          }
           if (info.publicMode) {
             document.body.classList.add("public-mode");
             const applyNote = document.getElementById("applyDevNote");
@@ -4910,6 +5928,10 @@
 
       function setOfficeState(state, office) {
         officeIsActive = state === "active";
+        const ownerMenuItem = document.getElementById("menuOwnerPanel");
+        if (ownerMenuItem) ownerMenuItem.hidden = !(state === "active" && office && office.role === "owner");
+        const ownerPanelBtn = document.getElementById("openOwnerPanelBtn");
+        if (ownerPanelBtn) ownerPanelBtn.hidden = !(state === "active" && office && office.role === "owner");
         if (officeLocked) officeLocked.hidden = state !== "locked";
         if (officePending) officePending.hidden = state !== "processing";
         if (officeActive) officeActive.hidden = state !== "active";
@@ -5602,6 +6624,12 @@
           });
           API.token = data.token;
           sessionStorage.setItem("nexusAdminToken", data.token);
+          if (data.steamId) {
+            linkedSteamId = data.steamId;
+            localStorage.setItem("nexusSteamId", linkedSteamId);
+            updateCabinetGate();
+            loadOffice(linkedSteamId);
+          }
           setAdminOpen(true);
           showToast("Адмін-панель відкрита");
           await Promise.all([loadAdminTickets(), loadBans(), loadAdminReports(), loadOverview(), loadAdminLogs(), loadAdminPromos(), loadAdminPromoActivations()]);
@@ -5978,9 +7006,13 @@
       document.getElementById("heroAuthBtn")?.addEventListener("click", () => {
         const steamId = linkedSteamId || localStorage.getItem("nexusSteamId") || localStorage.getItem("nexusLastTicketSteamId") || "";
         if (steamId) handleAccountClick();
+        else if (siteInfo && siteInfo.localOwnerLogin) runAdminLogin();
         else openSteamAuth();
       });
-      cabinetLoginBtn?.addEventListener("click", openSteamAuth);
+      cabinetLoginBtn?.addEventListener("click", () => {
+        if (siteInfo && siteInfo.localOwnerLogin) { runAdminLogin(); return; }
+        openSteamAuth();
+      });
 
       // ---------- Header dropdowns ----------
       const profileMenu = document.getElementById("profileMenu");
@@ -6042,6 +7074,7 @@
       const statsOnline = document.getElementById("statsOnline");
       const statsMap = document.getElementById("statsMap");
       const statsMax = document.getElementById("statsMax");
+      let lastServerStats = null;
 
       function escapeHtml(value) {
         return String(value).replace(/[&<>"']/g, (char) => {
@@ -6088,6 +7121,7 @@
           }
           if (!response.ok) throw new Error("Stats API error");
           const data = await response.json();
+          lastServerStats = data;
           if (statsOnline) statsOnline.textContent = `${data.online} / ${data.maxPlayers}`;
           if (statsMap) statsMap.textContent = data.map;
           if (statsMax) statsMax.textContent = String(data.maxPlayers);
@@ -6137,6 +7171,279 @@
         } catch (error) {
           // Keep static fallback rows if the local API is temporarily unavailable.
         }
+      }
+
+      // ---------- Maps / wipe voting ----------
+      let mapsState = null;
+      let mapsLoading = false;
+      let selectedServer = "nexus";
+
+      function mapsNumber(value) {
+        const number = Number(value);
+        return Number.isFinite(number) ? number.toLocaleString("uk-UA") : "0";
+      }
+
+      function mapsDate(value) {
+        if (!value) return "—";
+        const date = new Date(value);
+        if (Number.isNaN(date.getTime())) return "—";
+        return date.toLocaleDateString("uk-UA", { day: "2-digit", month: "2-digit", year: "numeric" });
+      }
+
+      function mapsCountdown(value) {
+        if (!value) return "";
+        const diff = new Date(value).getTime() - Date.now();
+        if (!Number.isFinite(diff) || diff <= 0) return "";
+        const minutes = Math.floor(diff / 60000);
+        const days = Math.floor(minutes / 1440);
+        const hours = Math.floor((minutes % 1440) / 60);
+        const mins = minutes % 60;
+        if (days > 0) return `${days} д ${hours} год`;
+        if (hours > 0) return `${hours} год ${mins} хв`;
+        return `${Math.max(1, mins)} хв`;
+      }
+
+      function mapsOnline(stats) {
+        if (!stats) return "— / —";
+        const online = Number(stats.online);
+        const max = Number(stats.maxPlayers);
+        return `${Number.isFinite(online) ? online : "—"} / ${Number.isFinite(max) ? max : "—"}`;
+      }
+
+      function renderMapsPage(state) {
+        if (!state) return;
+        const vote = state.vote || {};
+        const candidates = Array.isArray(vote.candidates) ? vote.candidates : [];
+        const current = state.current || {};
+        const archive = Array.isArray(state.archive) ? state.archive : [];
+        const loggedIn = Boolean(vote.loggedIn);
+        const hasVote = Boolean(vote.yourVote);
+        const isOpen = vote.status === "open";
+        const total = Number(vote.totalVotes) || 0;
+
+        const note = document.getElementById("mapsVoteNote");
+        if (note) {
+          note.textContent = isOpen
+            ? (hasVote
+              ? "Ваш голос враховано. Можете змінити вибір до завершення голосування."
+              : loggedIn
+                ? "Оберіть одну з мап — голос можна змінити до завершення голосування."
+                : "Увійдіть через Steam, щоб обрати мапу на наступний вайп.")
+            : "Голосування завершено. Дякуємо за участь!";
+        }
+
+        const totalNode = document.getElementById("mapsVoteTotal");
+        if (totalNode) {
+          totalNode.innerHTML = `<svg class="icon"><use href="#i-users"/></svg><b>${mapsNumber(total)}</b> ${total === 1 ? "голос" : "голосів"}`;
+        }
+
+        const deadlineNode = document.getElementById("mapsVoteDeadline");
+        if (deadlineNode) {
+          if (isOpen && vote.closesAt) {
+            const left = mapsCountdown(vote.closesAt);
+            deadlineNode.hidden = false;
+            const label = deadlineNode.querySelector("span");
+            if (label) label.textContent = left ? `До закриття: ${left}` : `До ${mapsDate(vote.closesAt)}`;
+          } else {
+            deadlineNode.hidden = true;
+          }
+        }
+
+        const box = document.getElementById("mapsCandidates");
+        if (box) {
+          if (!candidates.length) {
+            box.innerHTML = `<div class="maps-empty">Варіанти мап ще не додані. Зазирни пізніше.</div>`;
+          } else {
+            box.innerHTML = candidates.map((candidate) => {
+              const mine = vote.yourVote === candidate.id;
+              const leader = vote.leader && vote.leader.id === candidate.id;
+              const pct = Math.max(0, Math.min(100, Number(candidate.percentage) || 0));
+              const button = !isOpen
+                ? `<button class="btn btn-ghost maps-vote-btn" type="button" disabled>Голосування закрито</button>`
+                : mine
+                  ? `<button class="btn maps-vote-btn is-mine" type="button" disabled><svg class="icon"><use href="#i-check"/></svg> Твій голос</button>`
+                  : `<button class="btn ${loggedIn ? "btn-primary" : "btn-ghost"} maps-vote-btn" type="button" data-map-vote="${escapeHtml(candidate.id)}">${loggedIn ? "Голосувати" : "Увійти та голосувати"}</button>`;
+
+              return `
+                <article class="maps-candidate${leader ? " is-lead" : ""}${mine ? " is-mine" : ""}">
+                  <div class="maps-candidate-media">
+                    ${candidate.image ? `<img src="${escapeHtml(candidate.image)}" alt="Мапа ${escapeHtml(candidate.size)}" loading="lazy" decoding="async">` : ""}
+                    ${leader ? `<span class="maps-candidate-badge">Лідер голосування</span>` : mine ? `<span class="maps-candidate-badge">Твій вибір</span>` : ""}
+                  </div>
+                  <div class="maps-candidate-body">
+                    <div class="maps-candidate-top">
+                      <div>
+                        <div class="maps-candidate-name">${escapeHtml(candidate.name || "Procedural Map")} <span>${escapeHtml(candidate.size)}</span></div>
+                        <div class="maps-candidate-sub">${mapsNumber(candidate.monuments)} монументів · Seed ${escapeHtml(candidate.seed)}</div>
+                      </div>
+                      <div class="maps-candidate-pct">${pct}%</div>
+                    </div>
+                    <div class="maps-progress"><i style="width:${pct}%"></i></div>
+                    <div class="maps-vote-foot">
+                      <span>${mapsNumber(candidate.votes)} ${candidate.votes === 1 ? "голос" : "голосів"}</span>
+                      ${candidate.mapUrl ? `<a class="maps-link" href="${escapeHtml(candidate.mapUrl)}" target="_blank" rel="noopener">Деталі <svg class="icon"><use href="#i-arrow"/></svg></a>` : ""}
+                    </div>
+                    ${button}
+                  </div>
+                </article>`;
+            }).join("");
+          }
+        }
+
+        const currentBox = document.getElementById("mapsCurrent");
+        if (currentBox) {
+          const currentImage = current.image ? `<img src="${escapeHtml(current.image)}" alt="Поточна мапа" loading="lazy" decoding="async">` : "";
+          currentBox.innerHTML = `
+            <div class="maps-current-media">${currentImage}</div>
+            <div class="maps-current-body">
+              <span class="kicker">Зараз на сервері</span>
+              <h3>${escapeHtml(current.name || "Procedural Map")} <span>${escapeHtml(current.size || "—")}</span></h3>
+              <div class="maps-facts">
+                <div class="maps-fact"><span>Розмір</span><strong>${escapeHtml(current.size || "—")}</strong></div>
+                <div class="maps-fact"><span>Seed</span><button class="maps-seed" type="button" data-map-seed="${escapeHtml(current.seed || "")}"><strong>${escapeHtml(current.seed || "—")}</strong><svg class="icon"><use href="#i-copy"/></svg></button></div>
+                <div class="maps-fact"><span>Онлайн</span><strong>${mapsOnline(lastServerStats)}</strong></div>
+                <div class="maps-fact"><span>Наступний вайп</span><strong>${current.nextWipe ? mapsDate(current.nextWipe) : "—"}</strong></div>
+              </div>
+              <div class="maps-current-actions">
+                ${current.mapUrl ? `<a class="btn btn-primary" href="${escapeHtml(current.mapUrl)}" target="_blank" rel="noopener">Дивитися мапу <svg class="icon"><use href="#i-arrow"/></svg></a>` : ""}
+                <a class="btn btn-ghost" href="#/stats">Статистика сервера <svg class="icon"><use href="#i-chart"/></svg></a>
+              </div>
+            </div>`;
+        }
+
+        const archiveBox = document.getElementById("mapsArchiveList");
+        if (archiveBox) {
+          if (!archive.length) {
+            archiveBox.innerHTML = `<div class="maps-empty">Архів минулих вайпів ще порожній.</div>`;
+          } else {
+            archiveBox.innerHTML = archive.map((item) => `
+              <div class="maps-archive-row">
+                <span class="maps-archive-thumb">${item.image ? `<img src="${escapeHtml(item.image)}" alt="Мапа ${escapeHtml(item.size || "")}" loading="lazy" decoding="async">` : ""}</span>
+                <div class="maps-archive-date"><strong>${mapsDate(item.wipeDate)}</strong><span>${escapeHtml(item.name || "Procedural Map")} · ${mapsNumber(item.monuments)} монументів</span></div>
+                <span class="maps-archive-size">Розмір ${escapeHtml(item.size || "—")}</span>
+                <button class="maps-seed maps-archive-seed" type="button" data-map-seed="${escapeHtml(item.seed || "")}">Seed ${escapeHtml(item.seed || "—")} <svg class="icon"><use href="#i-copy"/></svg></button>
+                ${item.mapUrl ? `<a class="maps-archive-link" href="${escapeHtml(item.mapUrl)}" target="_blank" rel="noopener">Деталі <svg class="icon"><use href="#i-arrow"/></svg></a>` : `<span class="maps-archive-link"></span>`}
+              </div>`).join("");
+          }
+        }
+
+        const archiveCount = document.getElementById("mapsArchiveCount");
+        if (archiveCount) archiveCount.textContent = `${archive.length} ${archive.length === 1 ? "мапа" : "мап"}`;
+      }
+
+      function renderStatsMaps(state) {
+        if (!state) return;
+        const current = state.current || {};
+        const vote = state.vote || {};
+        const candidates = Array.isArray(vote.candidates) ? vote.candidates : [];
+        const currentBox = document.getElementById("statsMapCurrent");
+        if (currentBox) {
+          currentBox.innerHTML = `
+            ${current.image ? `<img src="${escapeHtml(current.image)}" alt="Поточна мапа" loading="lazy" decoding="async">` : ""}
+            <div>
+              <strong>${escapeHtml(current.name || "Procedural Map")} <span>${escapeHtml(current.size || "—")}</span></strong>
+              <small>Онлайн: ${mapsOnline(lastServerStats)} · Seed: ${escapeHtml(current.seed || "—")}</small>
+              <small>Наступний вайп: ${current.nextWipe ? mapsDate(current.nextWipe) : "—"}</small>
+            </div>`;
+        }
+
+        const votesBox = document.getElementById("statsMapVotes");
+        if (votesBox) {
+          if (!candidates.length) {
+            votesBox.innerHTML = `<div class="maps-empty">Голосування за наступну мапу ще не налаштоване.</div>`;
+          } else {
+            const totalVotes = Number(vote.totalVotes) || 0;
+            const top = [...candidates].sort((a, b) => Number(b.votes) - Number(a.votes)).slice(0, 3);
+            votesBox.innerHTML = top.map((candidate) => {
+              const pct = Math.max(0, Math.min(100, Number(candidate.percentage) || 0));
+              return `
+                <div class="stats-map-vote-row">
+                  <div class="stats-map-vote-top"><span>${escapeHtml(candidate.name || "Procedural Map")} ${escapeHtml(candidate.size)}</span><b>${pct}%</b></div>
+                  <div class="stats-map-vote-bar"><i style="width:${pct}%"></i></div>
+                </div>`;
+            }).join("") + `
+              <div class="stats-map-vote-top" style="justify-content:space-between;margin-top:2px">
+                <span>${totalVotes ? `${mapsNumber(totalVotes)} ${totalVotes === 1 ? "голос" : "голосів"}` : "Ще ніхто не голосував"}</span>
+                <a class="maps-link" href="#/maps">Голосувати <svg class="icon"><use href="#i-arrow"/></svg></a>
+              </div>`;
+          }
+        }
+      }
+
+      async function loadMaps() {
+        if (mapsLoading) return;
+        mapsLoading = true;
+        try {
+          const [maps, stats] = await Promise.all([
+            API.request(`/api/maps?server=${encodeURIComponent(selectedServer)}`).catch(() => null),
+            fetch("/api/stats").then((response) => (response.ok ? response.json() : null)).catch(() => null)
+          ]);
+          if (stats) lastServerStats = stats;
+          if (!maps) throw new Error("Не вдалося завантажити мапи");
+          mapsState = maps;
+          mapsState.selectedServer = selectedServer;
+          renderMapsPage(maps);
+          renderStatsMaps(maps);
+        } catch (error) {
+          const box = document.getElementById("mapsCandidates");
+          if (box) box.innerHTML = `<div class="maps-empty">${escapeHtml(error.message || "Не вдалося завантажити мапи")}</div>`;
+        } finally {
+          mapsLoading = false;
+        }
+      }
+
+      async function submitMapVote(mapId) {
+        if (!mapsState) return;
+        if (mapsState.vote.status !== "open") {
+          showToast("Голосування вже закрито");
+          return;
+        }
+        if (!mapsState.vote.loggedIn) {
+          showToast("Увійди через Steam, щоб голосувати");
+          if (siteInfo && siteInfo.localOwnerLogin) runAdminLogin();
+          else openSteamAuth();
+          return;
+        }
+
+        document.querySelectorAll("[data-map-vote]").forEach((button) => button.classList.add("is-loading"));
+        try {
+          const updated = await API.request("/api/maps/vote", {
+            method: "POST",
+            body: JSON.stringify({ mapId, server: selectedServer })
+          });
+          mapsState = updated;
+          renderMapsPage(updated);
+          renderStatsMaps(updated);
+          showToast("Голос зараховано");
+        } catch (error) {
+          showToast(error.message || "Не вдалося проголосувати");
+        } finally {
+          document.querySelectorAll("[data-map-vote]").forEach((button) => button.classList.remove("is-loading"));
+        }
+      }
+
+      document.addEventListener("click", (event) => {
+        const voteButton = event.target.closest("[data-map-vote]");
+        if (voteButton) {
+          event.preventDefault();
+          submitMapVote(voteButton.dataset.mapVote);
+          return;
+        }
+        const seedButton = event.target.closest("[data-map-seed]");
+        if (seedButton) {
+          event.preventDefault();
+          const seed = seedButton.dataset.mapSeed || "";
+          if (!seed) return;
+          copyText(seed).then((copied) => showToast(copied ? `Seed ${seed} скопійовано` : `Seed: ${seed}`));
+        }
+      });
+
+      const serverSelect = document.getElementById("mapsServerSelectInput");
+      if (serverSelect) {
+        serverSelect.addEventListener("change", (event) => {
+          selectedServer = event.target.value;
+          loadMaps();
+        });
       }
 
       loadStats();
@@ -6199,6 +7506,7 @@
             <a href="#/history" data-account-link="history"><svg class="icon"><use href="#i-history"/></svg> <span data-i18n="menu_history">Історія покупок</span></a>
             <a href="#/links" data-account-link="links"><svg class="icon"><use href="#i-link"/></svg> <span data-i18n="menu_links">Мої прив'язки</span></a>
             <a href="#/cabinet" data-account-link="cabinet"><svg class="icon"><use href="#i-user"/></svg> <span data-i18n="menu_cabinet">Личний кабінет</span></a>
+            ${currentOffice && currentOffice.role === "owner" ? `<a href="#/nexus-control" data-account-link="control"><svg class="icon"><use href="#i-shield"/></svg> <span>Панель власника</span></a>` : ""}
             <a href="#/apply" data-account-link="apply"><svg class="icon"><use href="#i-ticket"/></svg> <span data-i18n="menu_apply">Подати заявку</span></a>
             <button type="button" data-account-logout><svg class="icon"><use href="#i-logout"/></svg> <span data-i18n="menu_logout">Вихід</span></button>
           </nav>
@@ -6215,7 +7523,10 @@
             const overlay = document.createElement("div");
             overlay.className = "account-lock-overlay";
             overlay.innerHTML = `<button class="btn btn-primary" type="button" data-account-auth><svg class="icon"><use href="#i-steam"/></svg><span>Прив'язати акаунт</span></button>`;
-            overlay.querySelector("[data-account-auth]").addEventListener("click", openSteamAuth);
+            overlay.querySelector("[data-account-auth]").addEventListener("click", () => {
+              if (siteInfo && siteInfo.localOwnerLogin) runAdminLogin();
+              else openSteamAuth();
+            });
             el.appendChild(overlay);
             return;
           }
@@ -6334,6 +7645,7 @@
           }
         }
         if (target === "links") renderLinksState();
+        if (target === "maps" || target === "stats") setTimeout(loadMaps, 80);
         if (target === "history") setTimeout(loadPurchaseHistory, 80);
         if (target === "cabinet") {
           const steamId = accountSteamId();
@@ -6680,14 +7992,14 @@
     })();
   </script>
 
-  <script src="i18n-phrases.js"></script>
+  <script src="i18n-phrases.js?v=20261111-maps"></script>
   <script>
     /* ================= SITE LOCALIZATION (UA / RU / EN) ================= */
     (function () {
       const I18N = {
         ua: {
           nav_home: "Головна", nav_server: "Сервер", nav_store: "Магазин",
-          nav_stats: "Статистика", nav_rules: "Правила", nav_cabinet: "Тікет",
+          nav_stats: "Статистика", nav_maps: "Мапи", nav_rules: "Правила", nav_cabinet: "Тікет",
           menu_history: "Історія покупок", menu_links: "Мої прив'язки",
           menu_cabinet: "Личний кабінет", menu_apply: "Подати заявку", menu_logout: "Вихід",
           hero_lead: "Сервер Unity Rust — офіційний сайт. Чистий геймплей, x2 лут і збалансована гра без зайвого фарму.",
@@ -6737,7 +8049,7 @@
         },
         ru: {
           nav_home: "Главная", nav_server: "Сервер", nav_store: "Магазин",
-          nav_stats: "Статистика", nav_rules: "Правила", nav_cabinet: "Тикет",
+          nav_stats: "Статистика", nav_maps: "Карты", nav_rules: "Правила", nav_cabinet: "Тикет",
           menu_history: "История покупок", menu_links: "Мои привязки",
           menu_cabinet: "Личный кабинет", menu_apply: "Подать заявку", menu_logout: "Выход",
           hero_lead: "Сервер Unity Rust — официальный сайт. Чистый геймплей, x2 лут и сбалансированная игра без лишнего фарма.",
@@ -6787,7 +8099,7 @@
         },
         en: {
           nav_home: "Home", nav_server: "Server", nav_store: "Store",
-          nav_stats: "Stats", nav_rules: "Rules", nav_cabinet: "Ticket",
+          nav_stats: "Stats", nav_maps: "Maps", nav_rules: "Rules", nav_cabinet: "Ticket",
           menu_history: "Purchase history", menu_links: "My links",
           menu_cabinet: "Personal cabinet", menu_apply: "Submit application", menu_logout: "Log out",
           hero_lead: "Unity Rust server — official website. Clean gameplay, x2 loot and balanced play without excessive grinding.",
@@ -6973,6 +8285,756 @@
       apply(getLang());
 
       window.NexusI18N = { apply, getLang, dict: I18N, t: (value) => phraseFor(value, currentLang) };
+    })();
+  </script>
+
+  <script>
+    /* PWA видалено: знімаємо старий service worker і чистимо його кеш. */
+    (function () {
+      if ("serviceWorker" in navigator) {
+        navigator.serviceWorker.getRegistrations()
+          .then(function (list) { list.forEach(function (reg) { reg.unregister(); }); })
+          .catch(function () {});
+      }
+      if (window.caches && caches.keys) {
+        caches.keys()
+          .then(function (keys) { keys.forEach(function (key) { caches.delete(key); }); })
+          .catch(function () {});
+      }
+    })();
+  </script>
+  <script>
+    /* ============================================================
+       ПАНЕЛЬ ВЛАСНИКА — клієнтська логіка
+       ============================================================ */
+    (function () {
+      "use strict";
+
+      const $ = (id) => document.getElementById(id);
+      const token = () => sessionStorage.getItem("nexusAdminToken") || "";
+      const esc = (value) => String(value == null ? "" : value).replace(/[&<>"']/g, (char) => (
+        { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[char]
+      ));
+
+      function fmtDate(value) {
+        if (!value) return "—";
+        const date = new Date(value);
+        return Number.isNaN(date.getTime()) ? "—" : date.toLocaleString("uk-UA");
+      }
+
+      function fmtDuration(seconds) {
+        const total = Math.max(0, Number(seconds) || 0);
+        const hours = Math.floor(total / 3600);
+        const minutes = Math.floor((total % 3600) / 60);
+        return hours ? hours + " год " + minutes + " хв" : minutes + " хв";
+      }
+
+      function roleLabel(role) {
+        return ({ owner: "Власник", admin: "Адмін", moderator: "Модератор", media: "Медіа", other: "Інше" })[role] || role || "—";
+      }
+
+      async function api(url, options) {
+        options = options || {};
+        const headers = Object.assign({}, options.headers || {});
+        if (options.body && !headers["Content-Type"]) headers["Content-Type"] = "application/json";
+        const current = token();
+        if (current) headers["Authorization"] = "Bearer " + current;
+        const response = await fetch(url, Object.assign({}, options, { headers }));
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(data.error || ("HTTP " + response.status));
+        return data;
+      }
+
+      function toast(message, bad) {
+        const element = $("owToast");
+        if (!element) return;
+        element.textContent = message;
+        element.className = "ow-toast show" + (bad ? " bad" : "");
+        clearTimeout(toast.timer);
+        toast.timer = setTimeout(() => { element.className = "ow-toast"; }, 3200);
+      }
+
+      function setText(id, value) {
+        const element = $(id);
+        if (element) element.textContent = value == null ? "—" : String(value);
+      }
+
+      function toggleEmpty(id, empty) {
+        const element = $(id);
+        if (element) element.hidden = !empty;
+      }
+
+      const DEFAULT_TAG_ROLES = [
+        { role: "owner", tag: "OWNER", color: "#ff00ff" },
+        { role: "admin", tag: "ADMIN", color: "#ff5ea8" },
+        { role: "moderator", tag: "MDRT", color: "#ffcc00" },
+        { role: "media", tag: "MEDIA", color: "#1488ff" },
+        { role: "other", tag: "", color: "#8fa2bb" }
+      ];
+
+      const state = {
+        overview: null,
+        stats: null,
+        players: [],
+        staff: [],
+        accounts: [],
+        tickets: [],
+        shop: { promos: [], activations: [], purchases: [] },
+        bans: [],
+        reports: [],
+        logs: [],
+        announce: null,
+        tags: null,
+        cmdHistory: []
+      };
+      let loading = false;
+
+      const onOwnerPage = () => (location.hash || "").replace(/^#\/?/, "").split("?")[0] === "owner";
+
+      async function loadAll() {
+        if (loading) return;
+        loading = true;
+        const results = await Promise.allSettled([
+          api("/api/overview"),
+          api("/api/stats"),
+          api("/api/mobile/players"),
+          api("/api/owner/staff"),
+          api("/api/owner/shop"),
+          api("/api/bans"),
+          api("/api/reports"),
+          api("/api/admin/logs"),
+          api("/api/owner/announce"),
+          api("/api/owner/tags")
+        ]);
+        const [overview, stats, players, staff, shop, bans, reports, logs, announce, tags] = results;
+        if (overview.status === "fulfilled") state.overview = overview.value;
+        if (stats.status === "fulfilled") state.stats = stats.value;
+        if (players.status === "fulfilled") state.players = players.value.players || [];
+        if (staff.status === "fulfilled") {
+          state.staff = staff.value.staff || [];
+          state.accounts = staff.value.accounts || [];
+          state.tickets = staff.value.tickets || [];
+        }
+        if (shop.status === "fulfilled") state.shop = shop.value;
+        if (bans.status === "fulfilled") state.bans = bans.value.bans || [];
+        if (reports.status === "fulfilled") state.reports = reports.value.reports || [];
+        if (logs.status === "fulfilled") state.logs = logs.value.logs || [];
+        if (announce.status === "fulfilled") state.announce = announce.value;
+        if (tags.status === "fulfilled") state.tags = tags.value;
+        renderAll();
+        serverStatus();
+        loading = false;
+      }
+
+      function renderAll() {
+        renderStats();
+        renderOverview();
+        renderPlayers();
+        renderStaff();
+        renderShop();
+        renderModeration();
+        renderAnnounce();
+        renderTags();
+        renderCmdHistory();
+      }
+
+      function renderStats() {
+        const stats = state.stats || {};
+        const overview = state.overview || {};
+        setText("owOnline", (stats.online ?? 0) + " / " + (stats.maxPlayers ?? 20));
+        setText("owUptime", fmtDuration(stats.uptimeSeconds));
+        setText("owPlayersCount", state.players.length);
+        const tickets = overview.tickets || {};
+        setText("owTickets", (tickets.pending ?? 0) + " / " + (tickets.total ?? 0));
+        const reports = overview.reports || {};
+        setText("owReports", (reports.open ?? 0) + " / " + (reports.total ?? 0));
+        setText("owBans", overview.bans ?? state.bans.length);
+        setText("owStaff", state.staff.length);
+      }
+
+      function renderOverview() {
+        const stats = state.stats || {};
+        const info = $("owServerInfo");
+        if (info) {
+          const rows = [
+            ["Хост", "UNITY RUST"],
+            ["Карта", stats.map || "—"],
+            ["Режим", stats.mode || "—"],
+            ["Лут / стаки", "x" + (stats.loot ?? "?") + " / x" + (stats.stacks ?? "?")],
+            ["Онлайн", (stats.online ?? 0) + " / " + (stats.maxPlayers ?? 20)],
+            ["Uptime", fmtDuration(stats.uptimeSeconds)],
+            ["Сайт", location.origin]
+          ];
+          info.innerHTML = rows.map((row) => (
+            '<div class="ow-kv"><span>' + esc(row[0]) + '</span><strong>' + esc(row[1]) + '</strong></div>'
+          )).join("");
+        }
+
+        const recent = state.reports.slice(0, 5);
+        const body = $("owRecentReports");
+        if (body) {
+          body.innerHTML = recent.map((report) => (
+            "<tr><td>" + esc(report.target) + "</td><td>" + esc(report.violationType || "—") +
+            "</td><td>" + esc((report.reason || "").slice(0, 90)) + "</td><td>" + esc(report.status) +
+            "</td><td>" + fmtDate(report.createdAt) + "</td></tr>"
+          )).join("");
+        }
+        toggleEmpty("owRecentReportsEmpty", recent.length === 0);
+      }
+
+      function renderPlayers() {
+        const body = $("owPlayersTable");
+        if (body) {
+          body.innerHTML = state.players.map((player, index) => (
+            "<tr><td><strong>" + esc(player.name) + "</strong></td>" +
+            "<td>" + esc(player.steamId || "—") + "</td>" +
+            "<td>" + esc(player.ping ?? 0) + "</td>" +
+            "<td>" + fmtDuration(player.time ?? 0) + "</td>" +
+            '<td><button class="ow-btn danger" type="button" data-player-kick="' + index + '">Кік</button> ' +
+            '<button class="ow-btn danger" type="button" data-player-ban="' + index + '">Бан</button></td></tr>'
+          )).join("");
+        }
+        toggleEmpty("owPlayersEmpty", state.players.length === 0);
+      }
+
+      function renderStaff() {
+        const body = $("owStaffTable");
+        if (body) {
+          body.innerHTML = state.staff.map((member) => (
+            "<tr><td>" + esc(member.steamId) + "</td><td>" + esc(member.discord || "—") + "</td>" +
+            '<td><select class="ow-select" data-staff-role>' +
+            ["owner", "admin", "moderator", "media", "other"].map((role) => (
+              '<option value="' + role + '"' + (role === member.role ? " selected" : "") + ">" + roleLabel(role) + "</option>"
+            )).join("") + "</select></td>" +
+            '<td><select class="ow-select" data-staff-status>' +
+            ["active", "blocked"].map((status) => (
+              '<option value="' + status + '"' + (status === member.status ? " selected" : "") + ">" +
+              (status === "active" ? "Активний" : "Заблокований") + "</option>"
+            )).join("") + "</select></td>" +
+            '<td><button class="ow-btn ok" type="button" data-staff-save="' + esc(member.steamId) + '">Зберегти</button> ' +
+            '<button class="ow-btn danger" type="button" data-staff-remove="' + esc(member.steamId) + '">Видалити</button></td></tr>'
+          )).join("");
+        }
+        toggleEmpty("owStaffEmpty", state.staff.length === 0);
+
+        const tickets = $("owTicketsTable");
+        if (tickets) {
+          tickets.innerHTML = state.tickets.map((ticket) => (
+            "<tr><td>" + esc(ticket.steamId) + "</td><td>" + roleLabel(ticket.role) + "</td><td>" + esc(ticket.status) + "</td><td>" +
+            (ticket.status === "pending"
+              ? '<button class="ow-btn ok" type="button" data-ticket-accept="' + esc(ticket.id) + '">Прийняти</button> ' +
+                '<button class="ow-btn danger" type="button" data-ticket-reject="' + esc(ticket.id) + '">Відхилити</button>'
+              : "—") + "</td></tr>"
+          )).join("");
+        }
+        toggleEmpty("owTicketsEmpty", state.tickets.length === 0);
+
+        const accounts = $("owAccountsTable");
+        if (accounts) {
+          accounts.innerHTML = state.accounts.map((account) => (
+            "<tr><td>" + esc(account.steamId) + "</td><td>" + esc(account.discord || "—") + "</td><td>" +
+            (Number(account.steamLinked) ? "Так" : "Ні") + "</td><td>" + fmtDate(account.createdAt) + "</td></tr>"
+          )).join("");
+        }
+        toggleEmpty("owAccountsEmpty", state.accounts.length === 0);
+      }
+
+      function renderShop() {
+        const shop = state.shop || {};
+        const promos = shop.promos || [];
+        const promoBody = $("owPromosTable");
+        if (promoBody) {
+          promoBody.innerHTML = promos.map((promo) => (
+            "<tr><td><strong>" + esc(promo.code) + "</strong></td><td>" + esc(promo.description || "—") +
+            "</td><td>" + (Number(promo.activations) || 0) + " / " + (Number(promo.maxActivations) || 0) +
+            "</td><td>" + fmtDate(promo.createdAt) + "</td></tr>"
+          )).join("");
+        }
+        toggleEmpty("owPromosEmpty", promos.length === 0);
+
+        const purchases = shop.purchases || [];
+        const purchaseBody = $("owPurchasesTable");
+        if (purchaseBody) {
+          purchaseBody.innerHTML = purchases.map((purchase) => (
+            "<tr><td>" + esc(purchase.steamId) + "</td><td>" + esc(purchase.productName) +
+            "</td><td>" + esc(purchase.total) + "</td><td>" + esc(purchase.status) +
+            "</td><td>" + fmtDate(purchase.createdAt) + "</td></tr>"
+          )).join("");
+        }
+        toggleEmpty("owPurchasesEmpty", purchases.length === 0);
+
+        const activations = shop.activations || [];
+        const activationBody = $("owActivationsTable");
+        if (activationBody) {
+          activationBody.innerHTML = activations.map((activation) => (
+            "<tr><td>" + esc(activation.steamId) + "</td><td>" + esc(activation.promoId) +
+            "</td><td>" + fmtDate(activation.activatedAt) + "</td></tr>"
+          )).join("");
+        }
+        toggleEmpty("owActivationsEmpty", activations.length === 0);
+      }
+
+      function renderModeration() {
+        const bans = state.bans || [];
+        const banBody = $("owBansTable");
+        if (banBody) {
+          banBody.innerHTML = bans.map((ban) => (
+            "<tr><td>" + esc(ban.target) + "</td><td>" + esc(ban.reason) + "</td><td>" + esc(ban.admin || "—") +
+            "</td><td>" + fmtDate(ban.createdAt) + '</td><td><button class="ow-btn ok" type="button" data-ban-remove="' +
+            esc(ban.id) + '">Зняти</button></td></tr>'
+          )).join("");
+        }
+        toggleEmpty("owBansEmpty", bans.length === 0);
+
+        const reports = state.reports || [];
+        const reportBody = $("owReportsTable");
+        if (reportBody) {
+          reportBody.innerHTML = reports.map((report) => (
+            "<tr><td>" + esc(report.target) + "</td><td>" + esc((report.reason || "").slice(0, 90)) +
+            "</td><td>" + esc(report.status) + "</td><td>" + fmtDate(report.createdAt) + "</td><td>" +
+            (report.status === "open"
+              ? '<button class="ow-btn ok" type="button" data-report-resolve="' + esc(report.id) + '">Вирішити</button> ' +
+                '<button class="ow-btn danger" type="button" data-report-reject="' + esc(report.id) + '">Відхилити</button>'
+              : "—") + "</td></tr>"
+          )).join("");
+        }
+        toggleEmpty("owReportsEmpty", reports.length === 0);
+
+        const logs = state.logs || [];
+        const logBody = $("owLogsTable");
+        if (logBody) {
+          logBody.innerHTML = logs.slice(0, 80).map((log) => (
+            "<tr><td>" + esc(log.action) + "</td><td>" + esc(log.target || "—") +
+            "</td><td>" + esc((log.reason || "").slice(0, 90)) + "</td><td>" + fmtDate(log.createdAt) + "</td></tr>"
+          )).join("");
+        }
+        toggleEmpty("owLogsEmpty", logs.length === 0);
+      }
+
+      function renderAnnounce() {
+        const config = state.announce || {};
+        const enabled = $("owAnnEnabled");
+        if (enabled) enabled.checked = config.enabled !== false;
+        const interval = $("owAnnInterval");
+        if (interval && document.activeElement !== interval) interval.value = config.intervalMinutes || 10;
+        const messages = $("owAnnMessages");
+        if (messages && document.activeElement !== messages) messages.value = (config.messages || []).join("\n");
+      }
+
+      function renderTags() {
+        const config = state.tags || { roles: [], commandTemplate: "chat.tags add {steamId} {tag}" };
+        const body = $("owTagsTable");
+        if (body) {
+          const roles = config.roles || [];
+          body.innerHTML = roles.map((item) => (
+            "<tr><td>" + esc(item.role) + "</td><td><input class=\"ow-input\" type=\"text\" value=\"" + esc(item.tag) + "\" data-tag-role=\"" + esc(item.role) + "\" style=\"width:110px\"></td><td><input class=\"ow-input\" type=\"color\" value=\"" + esc(item.color) + "\" data-tag-role=\"" + esc(item.role) + "\"></td><td></td></tr>"
+          )).join("");
+        }
+      }
+
+      async function saveTags() {
+        const rows = document.querySelectorAll("[data-tag-role]");
+        const roles = [];
+        for (const el of rows) {
+          const role = el.getAttribute("data-tag-role");
+          const row = el.closest("tr");
+          const tagInput = row ? row.querySelector("input[type=\"text\"]") : null;
+          const colorInput = row ? row.querySelector("input[type=\"color\"]") : null;
+          roles.push({
+            role: role,
+            tag: tagInput ? tagInput.value.trim() : "",
+            color: colorInput ? colorInput.value : "#8fa2bb"
+          });
+        }
+        const templateInput = document.querySelector("input[data-tag-template]");
+        try {
+          const saved = await api("/api/owner/tags", {
+            method: "POST",
+            body: JSON.stringify({ roles, commandTemplate: templateInput ? templateInput.value : "chat.tags add {steamId} {tag}" })
+          });
+          state.tags = saved;
+          renderTags();
+          toast("Конфіг тегів збережено");
+        } catch (error) {
+          toast(error.message, true);
+        }
+      }
+
+      async function resetTags() {
+        try {
+          const saved = await api("/api/owner/tags", {
+            method: "POST",
+            body: JSON.stringify({ roles: DEFAULT_TAG_ROLES.slice(), commandTemplate: "chat.tags add {steamId} {tag}" })
+          });
+          state.tags = saved;
+          renderTags();
+          toast("Скинуто до типових тегів");
+        } catch (error) {
+          toast(error.message, true);
+        }
+      }
+
+      async function assignTag() {
+        const steamInput = $("owTagSteam");
+        const roleSelect = $("owTagRole");
+        const customInput = $("owTagCustom");
+        if (!steamInput || !/^7656\d{13}$/.test(steamInput.value.trim())) {
+          toast("Вкажи коректний SteamID64", true);
+          return;
+        }
+        const role = roleSelect ? roleSelect.value : "moderator";
+        const tagInput = customInput ? customInput.value.trim() : "";
+        const config = state.tags || {};
+        const roleRow = (config.roles || []).find((r) => r.role === role);
+        const tag = tagInput || (roleRow ? roleRow.tag : "") || "";
+        if (!tag) { toast("Вкажи тег", true); return; }
+        try {
+          const result = await api("/api/owner/tag/assign", {
+            method: "POST",
+            body: JSON.stringify({ steamId: steamInput.value.trim(), tag: tag })
+          });
+          toast("Тег '" + tag + "' видано через RCON");
+          if (steamInput) steamInput.value = "";
+          if (customInput) customInput.value = "";
+        } catch (error) {
+          toast(error.message, true);
+        }
+      }
+
+      async function serverStatus() {
+        try {
+          const data = await api("/api/owner/server/status");
+          const el = $("owServerStatus");
+          if (el) {
+            el.textContent = data.running ? "● сервер працює (PID " + data.pid + ")" : "● сервер зупинено";
+            el.className = data.running ? "ow-status-ok" : "ow-status-bad";
+          }
+        } catch (error) {
+          const el = $("owServerStatus");
+          if (el) { el.textContent = "● помилка перевірки"; el.className = "ow-status-bad"; }
+        }
+      }
+
+      async function serverAction(action) {
+        try {
+          await api("/api/owner/server/" + action, { method: "POST" });
+          toast("Сервер: " + action);
+          setTimeout(() => { serverStatus(); loadAll(); }, 4000);
+        } catch (error) {
+          toast(error.message, true);
+        }
+      }
+
+      async function runRcon(command) {
+        const output = $("owRconOut");
+        if (!command) return;
+        if (output) output.textContent += "> " + command + "\n";
+        try {
+          const data = await api("/api/owner/rcon", { method: "POST", body: JSON.stringify({ command }) });
+          const result = data.result || "(порожня відповідь)";
+          if (output) {
+            output.textContent += result + "\n";
+            output.scrollTop = output.scrollHeight;
+          }
+          /* Історія команд */
+          state.cmdHistory.unshift({ command: command, result: result, at: new Date().toISOString() });
+          if (state.cmdHistory.length > 50) state.cmdHistory.pop();
+          renderCmdHistory();
+          return result;
+        } catch (error) {
+          if (output) {
+            output.textContent += "❌ " + error.message + "\n";
+            output.scrollTop = output.scrollHeight;
+          }
+          toast(error.message, true);
+          return "";
+        }
+      }
+
+      function renderCmdHistory() {
+        const body = $("owCmdHistory");
+        if (!body) return;
+        body.innerHTML = state.cmdHistory.map((item) => (
+          "<tr><td><code>" + esc(item.command) + "</code></td><td>" + esc(String(item.result || "").slice(0, 120)) + "</td><td>" + fmtDate(item.at) + "</td></tr>"
+        )).join("");
+        toggleEmpty("owCmdHistoryEmpty", state.cmdHistory.length === 0);
+      }
+
+      async function broadcast() {
+        const input = $("owBroadcast");
+        const message = input ? input.value.trim() : "";
+        if (!message) return;
+        const result = await runRcon('say "' + message.replace(/"/g, "'") + '"');
+        if (input && !result) return;
+        if (input) input.value = "";
+        toast("Повідомлення надіслано в гру");
+      }
+
+      function saveAnnounce() {
+        const enabled = $("owAnnEnabled");
+        const interval = $("owAnnInterval");
+        const messages = $("owAnnMessages");
+        const payload = {
+          enabled: enabled ? enabled.checked : true,
+          intervalMinutes: interval ? Number(interval.value) || 10 : 10,
+          messages: messages ? messages.value.split("\n").map((line) => line.trim()).filter(Boolean) : []
+        };
+        api("/api/owner/announce", { method: "POST", body: JSON.stringify(payload) })
+          .then((saved) => {
+            state.announce = saved;
+            renderAnnounce();
+            toast("Авто-об'яви збережено");
+          })
+          .catch((error) => toast(error.message, true));
+      }
+
+      function testAnnounce() {
+        api("/api/owner/announce/test", { method: "POST" })
+          .then((data) => toast("Перевірка: " + (data.message || "надіслано")))
+          .catch((error) => toast(error.message, true));
+      }
+
+      document.querySelectorAll("[data-ow-tab]").forEach((button) => {
+        button.addEventListener("click", () => {
+          document.querySelectorAll("[data-ow-tab]").forEach((item) => item.classList.toggle("active", item === button));
+          document.querySelectorAll("[data-ow-panel]").forEach((panel) => {
+            panel.classList.toggle("active", panel.getAttribute("data-ow-panel") === button.getAttribute("data-ow-tab"));
+          });
+        });
+      });
+
+      document.querySelectorAll("[data-ow-cmd]").forEach((button) => {
+        button.addEventListener("click", () => {
+          const cmd = button.getAttribute("data-ow-cmd");
+          const needsArg = ["say", "kick", "ban", "unban", "ownerid", "modid", "middleid", "chat"].includes(cmd);
+          let full = cmd;
+          if (needsArg) {
+            const arg = prompt("Введи аргумент для «" + cmd + "»:");
+            if (arg === null) return;
+            full = cmd + " \"" + String(arg).replace(/"/g, "'") + "\"";
+          }
+          runRcon(full);
+        });
+      });
+
+      const refresh = $("owRefresh");
+      if (refresh) refresh.addEventListener("click", loadAll);
+      const playersRefresh = $("owPlayersRefresh");
+      if (playersRefresh) playersRefresh.addEventListener("click", loadAll);
+      const broadcastBtn = $("owBroadcastBtn");
+      if (broadcastBtn) broadcastBtn.addEventListener("click", broadcast);
+      const broadcastInput = $("owBroadcast");
+      if (broadcastInput) {
+        broadcastInput.addEventListener("keydown", (event) => {
+          if (event.key === "Enter") { event.preventDefault(); broadcast(); }
+        });
+      }
+
+      const rconRun = $("owRconRun");
+      if (rconRun) {
+        rconRun.addEventListener("click", () => {
+          const input = $("owRconInput");
+          if (input && input.value.trim()) {
+            runRcon(input.value.trim());
+            input.value = "";
+          }
+        });
+      }
+      const rconInput = $("owRconInput");
+      if (rconInput) {
+        rconInput.addEventListener("keydown", (event) => {
+          if (event.key === "Enter") { event.preventDefault(); if (rconRun) rconRun.click(); }
+        });
+      }
+
+      const customCmdRun = $("owCustomCmdRun");
+      if (customCmdRun) {
+        customCmdRun.addEventListener("click", () => {
+          const input = $("owCustomCmd");
+          if (input && input.value.trim()) {
+            runRcon(input.value.trim());
+            input.value = "";
+          }
+        });
+      }
+      const customCmdInput = $("owCustomCmd");
+      if (customCmdInput) {
+        customCmdInput.addEventListener("keydown", (event) => {
+          if (event.key === "Enter") { event.preventDefault(); if (customCmdRun) customCmdRun.click(); }
+        });
+      }
+
+      const annSave = $("owAnnSave");
+      if (annSave) annSave.addEventListener("click", saveAnnounce);
+      const annTest = $("owAnnTest");
+      if (annTest) annTest.addEventListener("click", testAnnounce);
+
+      const sStart = $("owServerStart");
+      if (sStart) sStart.addEventListener("click", () => serverAction("start"));
+      const sStop = $("owServerStop");
+      if (sStop) sStop.addEventListener("click", () => serverAction("stop"));
+      const sRestart = $("owServerRestart");
+      if (sRestart) sRestart.addEventListener("click", () => serverAction("restart"));
+
+      const staffAdd = $("owStaffAdd");
+      if (staffAdd) {
+        staffAdd.addEventListener("click", () => {
+          const steam = $("owStaffSteam");
+          const discord = $("owStaffDiscord");
+          const role = $("owStaffRole");
+          if (!steam || !/^7656\d{13}$/.test(steam.value.trim())) {
+            toast("SteamID64 має містити 17 цифр і починатися з 7656", true);
+            return;
+          }
+          api("/api/owner/staff/add", {
+            method: "POST",
+            body: JSON.stringify({
+              steamId: steam.value.trim(),
+              discord: discord ? discord.value.trim() : "",
+              role: role ? role.value : "moderator"
+            })
+          }).then(() => {
+            if (steam) steam.value = "";
+            if (discord) discord.value = "";
+            toast("Акаунт додано");
+            loadAll();
+          }).catch((error) => toast(error.message, true));
+        });
+      }
+
+      const sStatusRefresh = $("owServerStatusRefresh");
+      if (sStatusRefresh) sStatusRefresh.addEventListener("click", serverStatus);
+
+      const tagsSave = $("owTagsSave");
+      if (tagsSave) tagsSave.addEventListener("click", saveTags);
+      const tagsReset = $("owTagsReset");
+      if (tagsReset) tagsReset.addEventListener("click", resetTags);
+      const tagAssign = $("owTagAssign");
+      if (tagAssign) tagAssign.addEventListener("click", assignTag);
+
+      const promoCreate = $("owPromoCreate");
+      if (promoCreate) {
+        promoCreate.addEventListener("click", () => {
+          const code = $("owPromoCode");
+          const max = $("owPromoMax");
+          const description = $("owPromoDesc");
+          if (!code || !code.value.trim()) { toast("Вкажи код промокоду", true); return; }
+          api("/api/owner/promo", {
+            method: "POST",
+            body: JSON.stringify({
+              code: code.value.trim(),
+              maxActivations: max ? Number(max.value) || 50 : 50,
+              description: description ? description.value.trim() : ""
+            })
+          }).then(() => {
+            if (code) code.value = "";
+            if (description) description.value = "";
+            toast("Промокод створено");
+            loadAll();
+          }).catch((error) => toast(error.message, true));
+        });
+      }
+
+      document.addEventListener("click", (event) => {
+        const kick = event.target.closest("[data-player-kick]");
+        if (kick) {
+          const player = state.players[Number(kick.getAttribute("data-player-kick"))];
+          if (!player) return;
+          const reason = prompt("Кік " + player.name + ". Причина:", "Порушення правил");
+          if (reason === null) return;
+          runRcon('kick "' + String(player.name).replace(/"/g, "'") + '" "' + String(reason).replace(/"/g, "'") + '"')
+            .then(() => setTimeout(loadAll, 1200));
+          return;
+        }
+
+        const ban = event.target.closest("[data-player-ban]");
+        if (ban) {
+          const player = state.players[Number(ban.getAttribute("data-player-ban"))];
+          if (!player) return;
+          const reason = prompt("Бан " + player.name + ". Причина:", "Порушення правил");
+          if (reason === null) return;
+          api("/api/bans", {
+            method: "POST",
+            body: JSON.stringify({ target: player.steamId || player.name, reason: String(reason) })
+          }).then(() => {
+            toast("Гравця забанено");
+            setTimeout(loadAll, 1200);
+          }).catch((error) => toast(error.message, true));
+          return;
+        }
+
+        const staffSave = event.target.closest("[data-staff-save]");
+        if (staffSave) {
+          const row = staffSave.closest("tr");
+          const role = row && row.querySelector("[data-staff-role]");
+          const status = row && row.querySelector("[data-staff-status]");
+          api("/api/owner/staff", {
+            method: "POST",
+            body: JSON.stringify({
+              steamId: staffSave.getAttribute("data-staff-save"),
+              role: role ? role.value : undefined,
+              status: status ? status.value : undefined
+            })
+          }).then(() => { toast("Персонал оновлено"); loadAll(); })
+            .catch((error) => toast(error.message, true));
+          return;
+        }
+
+        const staffRemove = event.target.closest("[data-staff-remove]");
+        if (staffRemove) {
+          const steamId = staffRemove.getAttribute("data-staff-remove");
+          if (!confirm("Видалити акаунт " + steamId + " зі складу персоналу?")) return;
+          api("/api/owner/staff/" + encodeURIComponent(steamId), { method: "DELETE" })
+            .then(() => { toast("Акаунт видалено"); loadAll(); })
+            .catch((error) => toast(error.message, true));
+          return;
+        }
+
+        const ticketAccept = event.target.closest("[data-ticket-accept]");
+        if (ticketAccept) {
+          api("/api/tickets/" + encodeURIComponent(ticketAccept.getAttribute("data-ticket-accept")) + "/accept", { method: "POST" })
+            .then(() => { toast("Заявку прийнято"); loadAll(); })
+            .catch((error) => toast(error.message, true));
+          return;
+        }
+        const ticketReject = event.target.closest("[data-ticket-reject]");
+        if (ticketReject) {
+          api("/api/tickets/" + encodeURIComponent(ticketReject.getAttribute("data-ticket-reject")) + "/reject", { method: "POST" })
+            .then(() => { toast("Заявку відхилено"); loadAll(); })
+            .catch((error) => toast(error.message, true));
+          return;
+        }
+
+        const banRemove = event.target.closest("[data-ban-remove]");
+        if (banRemove) {
+          api("/api/bans/" + encodeURIComponent(banRemove.getAttribute("data-ban-remove")), { method: "DELETE" })
+            .then(() => { toast("Бан знято"); loadAll(); })
+            .catch((error) => toast(error.message, true));
+          return;
+        }
+
+        const reportResolve = event.target.closest("[data-report-resolve]");
+        if (reportResolve) {
+          api("/api/reports/" + encodeURIComponent(reportResolve.getAttribute("data-report-resolve")) + "/resolve", { method: "POST" })
+            .then(() => { toast("Скаргу вирішено"); loadAll(); })
+            .catch((error) => toast(error.message, true));
+          return;
+        }
+        const reportReject = event.target.closest("[data-report-reject]");
+        if (reportReject) {
+          api("/api/reports/" + encodeURIComponent(reportReject.getAttribute("data-report-reject")) + "/reject", { method: "POST" })
+            .then(() => { toast("Скаргу відхилено"); loadAll(); })
+            .catch((error) => toast(error.message, true));
+        }
+      });
+
+      function maybeLoad() {
+        if (onOwnerPage()) loadAll();
+      }
+
+      window.addEventListener("hashchange", maybeLoad);
+      if (onOwnerPage()) loadAll();
+      setInterval(() => { if (onOwnerPage()) loadAll(); }, 30000);
     })();
   </script>
 </body>

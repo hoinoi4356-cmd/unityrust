@@ -1,0 +1,118 @@
+{
+  "current": {
+    "name": "Procedural Map",
+    "size": 3000,
+    "seed": "618226138",
+    "image": "/images/maps/current-map.jpg",
+    "wipeDate": "2026-11-05T18:00:00.000Z",
+    "nextWipe": "2026-11-12T18:00:00.000Z",
+    "mapUrl": ""
+  },
+  "vote": {
+    "status": "open",
+    "closesAt": "2026-11-12T17:00:00.000Z",
+    "candidates": [
+      {
+        "id": "map-827032446",
+        "name": "Procedural Map 3000",
+        "size": 3000,
+        "seed": "827032446",
+        "monuments": 14,
+        "image": "/images/maps/candidate-3000.webp",
+        "mapUrl": "https://just-wiped.net/rust-maps/procedural-map-3000-827032446"
+      },
+      {
+        "id": "map-881608074",
+        "name": "Procedural Map 3700",
+        "size": 3700,
+        "seed": "881608074",
+        "monuments": 17,
+        "image": "/images/maps/candidate-3700.webp",
+        "mapUrl": "https://just-wiped.net/rust-maps/procedural-map-3700-881608074"
+      },
+      {
+        "id": "map-18627",
+        "name": "Procedural Map 4000",
+        "size": 4000,
+        "seed": "18627",
+        "monuments": 18,
+        "image": "/images/maps/candidate-4000.webp",
+        "mapUrl": "https://just-wiped.net/rust-maps/procedural-map-4000-18627"
+      },
+      {
+        "id": "map-923456789",
+        "name": "Procedural Map 2500",
+        "size": 2500,
+        "seed": "923456789",
+        "monuments": 12,
+        "image": "/images/maps/candidate-2500.webp",
+        "mapUrl": "https://just-wiped.net/rust-maps/procedural-map-2500-923456789"
+      },
+      {
+        "id": "map-555012345",
+        "name": "Procedural Map 4500",
+        "size": 4500,
+        "seed": "555012345",
+        "monuments": 20,
+        "image": "/images/maps/candidate-4500.webp",
+        "mapUrl": "https://just-wiped.net/rust-maps/procedural-map-4500-555012345"
+      }
+    ]
+  },
+  "archive": [
+    {
+      "name": "Procedural Map",
+      "size": 3000,
+      "seed": "618226138",
+      "monuments": 14,
+      "wipeDate": "2026-11-05T18:00:00.000Z",
+      "image": "/images/maps/current-map.jpg",
+      "mapUrl": ""
+    },
+    {
+      "name": "Procedural Map",
+      "size": 2500,
+      "seed": "1675946856",
+      "monuments": 13,
+      "wipeDate": "2026-10-29T18:00:00.000Z",
+      "image": "/images/maps/archive-2500.webp",
+      "mapUrl": "https://just-wiped.net/rust-maps/procedural-map-2500-1675946856"
+    },
+    {
+      "name": "Procedural Map",
+      "size": 3000,
+      "seed": "447587810",
+      "monuments": 16,
+      "wipeDate": "2026-10-22T18:00:00.000Z",
+      "image": "/images/maps/archive-3000.webp",
+      "mapUrl": "https://just-wiped.net/rust-maps/procedural-map-3000-447587810"
+    },
+    {
+      "name": "Procedural Map",
+      "size": 4000,
+      "seed": "64134858",
+      "monuments": 19,
+      "wipeDate": "2026-10-15T18:00:00.000Z",
+      "image": "/images/maps/archive-4000.webp",
+      "mapUrl": "https://just-wiped.net/rust-maps/procedural-map-4000-64134858"
+    },
+    {
+      "name": "Procedural Map",
+      "size": 3500,
+      "seed": "777888999",
+      "monuments": 15,
+      "wipeDate": "2026-10-08T18:00:00.000Z",
+      "image": "/images/maps/archive-3500.webp",
+      "mapUrl": "https://just-wiped.net/rust-maps/procedural-map-3500-777888999"
+    },
+    {
+      "name": "Procedural Map",
+      "size": 2000,
+      "seed": "111222333",
+      "monuments": 10,
+      "wipeDate": "2026-10-01T18:00:00.000Z",
+      "image": "/images/maps/archive-2000.webp",
+      "mapUrl": "https://just-wiped.net/rust-maps/procedural-map-2000-111222333"
+    }
+  ]
+}

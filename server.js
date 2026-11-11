@@ -1,4 +1,5 @@
 const http = require("http");
+const { spawn, exec, execSync } = require("child_process");
 const fs = require("fs");
 const path = require("path");
 const crypto = require("crypto");
@@ -20,6 +21,11 @@ const RCON_URL = String(process.env.RCON_URL || "").trim();
 const RCON_NAME = process.env.RCON_NAME || "UNITY ADMIN";
 const ADMIN_PASSWORD = String(process.env.ADMIN_PASSWORD || "");
 const OWNER_STEAM_ID = String(process.env.OWNER_STEAM_ID || "").trim();
+
+/* Локальний режим: вхід паролем адмінки також відкриває кабінет власника
+   без Steam OpenID (на LAN Steam-callback недоступний). Для публічного
+   хостингу вимкнено; можна примусово увімкнути через LOCAL_OWNER_LOGIN=1. */
+const LOCAL_OWNER_LOGIN = !IS_PROD || String(process.env.LOCAL_OWNER_LOGIN || "") === "1";
 const PUBLIC_BASE_URL = String(
   process.env.PUBLIC_BASE_URL || (IS_PROD ? "" : "http://127.0.0.1:8088")
 ).replace(/\/+$/, "");
@@ -28,6 +34,10 @@ const PUBLIC_BASE_URL = String(
    Вмикається SITE_MODE=public. */
 const PUBLIC_MODE = String(process.env.SITE_MODE || "").trim().toLowerCase() === "public";
 const RCON_ENABLED = !PUBLIC_MODE && Boolean(RCON_URL);
+/* Керування локальним RustDedicated.exe має сенс лише на машині власника.
+   На публічному хостингу ці endpoints вимкнені, навіть якщо хтось увійде
+   як owner. */
+const LOCAL_CONTROL_ENABLED = !PUBLIC_MODE && !IS_PROD;
 
 /* Онлайн без RCON: UDP A2S-запит до query-порту Rust-сервера (за замовчуванням 28017). */
 const SERVER_QUERY_HOST = String(
@@ -80,6 +90,58 @@ const OFFICES_FILE = path.join(DATA_DIR, "offices.json");
 const ACCOUNTS_FILE = path.join(DATA_DIR, "accounts.json");
 const TASKS_FILE = path.join(DATA_DIR, "tasks.json");
 const PROMOS_FILE = path.join(DATA_DIR, "promos.json");
+const ANNOUNCE_FILE = path.join(DATA_DIR, "announce.json");
+const SERVER_CONTROL_FILE = path.join(DATA_DIR, "server-control.json");
+const TAGS_FILE = path.join(DATA_DIR, "tags.json");
+const MAPS_FILE = path.join(DATA_DIR, "maps.json");
+/* Публічний хостинг не має папки data/ у git — стартові карти лежать
+   поруч із server.js і використовуються, доки немає data/maps.json. */
+const MAPS_SEED_FILE = path.join(__dirname, "maps.default.json");
+
+const RUST_SERVER_EXE_DEFAULT = "D:\\RustServer\\RustDedicated.exe";
+const RUST_SERVER_DIR_DEFAULT = "D:\\RustServer";
+const RUST_SERVER_RCON_PASSWORD = String(process.env.RUST_SERVER_RCON_PASSWORD || "").trim();
+const RUST_SERVER_ARGS_DEFAULT = [
+  "-batchmode",
+  "-nographics",
+  "-logfile",
+  "D:\\RustServer\\logs\\server.log",
+  "+server.identity",
+  "nexus",
+  "+server.hostname",
+  "UNITY RUST | MAX 16 | [WIPE 05.11]",
+  "+server.description",
+  "Unity Rust - x2 PvP, global, no region lock",
+  "+server.worldsize",
+  "3000",
+  "+server.seed",
+  "618226138",
+  "+server.maxplayers",
+  "20",
+  "+server.port",
+  "28015",
+  "+server.queryport",
+  "28017",
+  "+rcon.port",
+  "28016",
+  ...(RUST_SERVER_RCON_PASSWORD ? ["+rcon.password", RUST_SERVER_RCON_PASSWORD] : []),
+  "+rcon.web",
+  "1",
+  "+app.port",
+  "28082",
+  "+relationshipmanager.maxteamsize",
+  "16",
+  "+server.saveinterval",
+  "300",
+  "+server.tickrate",
+  "30",
+  "+crafting.timescale",
+  "2",
+  "+server.planttickscale",
+  "2",
+  "+livestock.agescale",
+  "0.5"
+];
 
 /* ------------------------------------------------------------ перевірка
    Краще не запуститися, ніж стартувати з порожнім паролем адмінки. */
@@ -154,7 +216,27 @@ function deleteSteamSession(token) {
   db.prepare("DELETE FROM steam_sessions WHERE token = ?").run(token);
 }
 
+function isPrivateAddress(req) {
+  let ip = String((req && req.socket && req.socket.remoteAddress) || "").trim();
+  if (ip.startsWith("::ffff:")) ip = ip.slice(7);
+  if (ip === "::1" || ip === "127.0.0.1") return true;
+  if (/^10\./.test(ip)) return true;
+  if (/^192\.168\./.test(ip)) return true;
+  const m = ip.match(/^172\.(\d+)\./);
+  if (m && Number(m[1]) >= 16 && Number(m[1]) <= 31) return true;
+  if (/^fe[89ab][0-9a-f]:/i.test(ip)) return true;
+  if (/^f[cd][0-9a-f]{2}:/i.test(ip)) return true;
+  return false;
+}
+
 function getSteamSession(req) {
+  /* Локальний режим: будь-який запит із приватної мережі = власник.
+     Це прибирає пароль на локальному сайті. На хостингу (IS_PROD)
+     LOCAL_OWNER_LOGIN вимкнений. Перевірка стоїть ДО cookie, щоб стара
+     сесія іншого акаунта не могла заблокувати вхід власника. */
+  if (LOCAL_OWNER_LOGIN && OWNER_STEAM_ID && isPrivateAddress(req)) {
+    return { steamId: OWNER_STEAM_ID, expiresAt: Date.now() + SESSION_TTL_MS, localOwner: true };
+  }
   const cookie = String(req.headers.cookie || "");
   const match = cookie.match(/(?:^|;\s*)nexus_session=([^;]+)/);
   if (!match) return null;
@@ -164,6 +246,40 @@ function getSteamSession(req) {
     return null;
   }
   return { steamId: row.steamId, expiresAt: Number(row.expiresAt) };
+}
+
+/* Публічне голосування за карту без Steam OpenID (на Render він вимкнений).
+   Кожен браузер отримує випадковий HttpOnly-cookie; один голос на браузер.
+   Якщо є справжня Steam-сесія — голос прив'язується до SteamID. */
+const VOTER_COOKIE = "nexus_voter";
+const VOTER_COOKIE_RE = /^guest-[a-f0-9]{32}$/;
+
+function readCookie(req, name) {
+  const cookie = String((req && req.headers && req.headers.cookie) || "");
+  const match = cookie.match(new RegExp("(?:^|;\\s*)" + name + "=([^;]+)"));
+  if (!match) return "";
+  try {
+    return decodeURIComponent(match[1]);
+  } catch (error) {
+    return match[1];
+  }
+}
+
+function ensureVoterId(req, res) {
+  const session = getSteamSession(req);
+  if (session && session.steamId) return session.steamId;
+  if (!PUBLIC_MODE) return null;
+
+  let voterId = readCookie(req, VOTER_COOKIE);
+  if (!VOTER_COOKIE_RE.test(voterId)) {
+    voterId = "guest-" + crypto.randomBytes(16).toString("hex");
+    if (res && !res.headersSent) {
+      const flags = ["HttpOnly", "SameSite=Lax", "Path=/", "Max-Age=31536000"];
+      if (COOKIE_SECURE) flags.push("Secure");
+      res.setHeader("Set-Cookie", `${VOTER_COOKIE}=${voterId}; ${flags.join("; ")}`);
+    }
+  }
+  return voterId;
 }
 
 function escapeHtml(value) {
@@ -290,7 +406,17 @@ function ensureData() {
       steamId TEXT,
       expiresAt INTEGER
     );
+    CREATE TABLE IF NOT EXISTS map_votes (
+      steamId TEXT,
+      mapId TEXT,
+      server TEXT DEFAULT 'nexus',
+      updatedAt TEXT,
+      PRIMARY KEY (steamId, server)
+    );
   `);
+  try { db.prepare("ALTER TABLE map_votes ADD COLUMN server TEXT DEFAULT 'nexus'").run(); } catch {}
+  try { db.prepare("DROP INDEX IF EXISTS map_votes_pk").run(); } catch {}
+  try { db.prepare("CREATE UNIQUE INDEX IF NOT EXISTS map_votes_pk ON map_votes(steamId, server)").run(); } catch {}
 
   /* Сесії переживають рестарт сервера, інакше після кожного перезапуску
      власник знову бачив би закритий кабінет. */
@@ -299,6 +425,9 @@ function ensureData() {
   const reportColumns = db.prepare("PRAGMA table_info(reports)").all().map((column) => column.name);
   if (!reportColumns.includes("video")) db.exec("ALTER TABLE reports ADD COLUMN video TEXT");
   if (!reportColumns.includes("violationType")) db.exec("ALTER TABLE reports ADD COLUMN violationType TEXT");
+
+  const promoColumns = db.prepare("PRAGMA table_info(promos)").all().map((column) => column.name);
+  if (!promoColumns.includes("description")) db.exec("ALTER TABLE promos ADD COLUMN description TEXT");
 
   const isEmpty = (table) => db.prepare(`SELECT COUNT(*) AS count FROM ${table}`).get().count === 0;
 
@@ -347,6 +476,95 @@ function ensureData() {
 
 function readJson(file, fallback) {
   try { return JSON.parse(fs.readFileSync(file, "utf8")); } catch (error) { return fallback; }
+}
+
+/* ---------- Maps / wipe voting ---------- */
+
+const MAPS_FALLBACK = {
+  current: {
+    name: "Procedural Map",
+    size: 3000,
+    seed: "618226138",
+    image: "/images/maps/current-map.jpg",
+    wipeDate: "",
+    nextWipe: ""
+  },
+  vote: { status: "closed", closesAt: "", candidates: [] },
+  archive: []
+};
+
+function getMapsContent(server = "nexus") {
+  const data = readJson(MAPS_FILE, readJson(MAPS_SEED_FILE, MAPS_FALLBACK));
+  if (!data || typeof data !== "object") return MAPS_FALLBACK;
+  // Only the main "nexus" server has map voting configured.
+  // Other servers (nexus-x3, nexus-x5, nexus-x10) are in development.
+  if (server !== "nexus") {
+    return {
+      current: MAPS_FALLBACK.current,
+      vote: { status: "closed", closesAt: "", candidates: [] },
+      archive: []
+    };
+  }
+  return {
+    current: data.current && typeof data.current === "object" ? data.current : MAPS_FALLBACK.current,
+    vote: data.vote && typeof data.vote === "object" ? data.vote : MAPS_FALLBACK.vote,
+    archive: Array.isArray(data.archive) ? data.archive : []
+  };
+}
+
+function getMapVoteState(req, server = "nexus", res = null) {
+  const content = getMapsContent(server);
+  const session = getSteamSession(req);
+  const voterId = ensureVoterId(req, res);
+  const rows = db.prepare("SELECT steamId, mapId FROM map_votes WHERE server = ?").all(server);
+  const counts = new Map();
+  let yourVote = null;
+
+  for (const row of rows) {
+    counts.set(row.mapId, (counts.get(row.mapId) || 0) + 1);
+    if (voterId && row.steamId === voterId) yourVote = row.mapId;
+  }
+
+  const totalVotes = rows.length;
+  const vote = content.vote || {};
+  const candidates = (Array.isArray(vote.candidates) ? vote.candidates : []).map((candidate) => {
+    const votes = counts.get(String(candidate.id || "")) || 0;
+    return {
+      id: String(candidate.id || ""),
+      name: String(candidate.name || "Procedural Map"),
+      size: Number(candidate.size) || 0,
+      seed: String(candidate.seed || ""),
+      monuments: Number(candidate.monuments) || 0,
+      image: String(candidate.image || ""),
+      mapUrl: String(candidate.mapUrl || ""),
+      votes,
+      percentage: totalVotes ? Math.round((votes / totalVotes) * 100) : 0
+    };
+  });
+
+  let leader = null;
+  for (const candidate of candidates) {
+    if (candidate.votes > 0 && (!leader || candidate.votes > leader.votes)) leader = candidate;
+  }
+
+  const closesAt = vote.closesAt ? String(vote.closesAt) : null;
+  const expired = closesAt ? Date.parse(closesAt) < Date.now() : false;
+  const status = expired ? "closed" : String(vote.status || "closed");
+
+  return {
+    current: content.current,
+    vote: {
+      status,
+      closesAt,
+      expired,
+      candidates,
+      totalVotes,
+      yourVote,
+      leader: leader ? { id: leader.id, name: leader.name, size: leader.size, seed: leader.seed } : null,
+      loggedIn: Boolean(session) || Boolean(voterId)
+    },
+    archive: content.archive
+  };
 }
 
 function getTickets() {
@@ -789,7 +1007,20 @@ function savePromos(promos) {
 function isAdmin(req) {
   const header = String(req.headers["authorization"] || "");
   const token = header.startsWith("Bearer ") ? header.slice(7) : String(req.headers["x-admin-token"] || "");
-  return adminTokens.has(token);
+  if (adminTokens.has(token)) return true;
+  return LOCAL_OWNER_LOGIN && isPrivateAddress(req);
+}
+
+function isOwnerRequest(req) {
+  if (isAdmin(req)) return true;
+  const session = getSteamSession(req);
+  return Boolean(session && session.steamId === OWNER_STEAM_ID);
+}
+
+function stripToken(row) {
+  const copy = { ...row };
+  delete copy.token;
+  return copy;
 }
 
 function readBody(req) {
@@ -930,6 +1161,193 @@ function rcon(query) {
   return next;
 }
 
+/* --------------------------------------------------- авто-об'яви в грі
+   Кожні N хвилин сайт сам пише в ігровий чат повідомлення через RCON.
+   Налаштовується з панелі власника (data/announce.json). */
+const DEFAULT_ANNOUNCEMENTS = [
+  "Подавай жалобу на нарушителей через /report",
+  "Играй честно — читеры будут забанены",
+  "Наш сайт: http://192.168.0.184:8088",
+  "Вайп 05.11 — следи за новостями в Discord"
+];
+
+function getAnnounceConfig() {
+  const raw = readJson(ANNOUNCE_FILE, null);
+  const cfg = raw && typeof raw === "object" ? raw : {};
+  const messages = Array.isArray(cfg.messages) && cfg.messages.length
+    ? cfg.messages.map((item) => String(item).slice(0, 300)).filter(Boolean).slice(0, 30)
+    : DEFAULT_ANNOUNCEMENTS.slice();
+  return {
+    enabled: cfg.enabled !== false,
+    intervalMinutes: Math.min(180, Math.max(1, Number(cfg.intervalMinutes) || 10)),
+    messages
+  };
+}
+
+function saveAnnounceConfig(cfg) {
+  const clean = {
+    enabled: Boolean(cfg && cfg.enabled),
+    intervalMinutes: Math.min(180, Math.max(1, Number(cfg && cfg.intervalMinutes) || 10)),
+    messages: (Array.isArray(cfg && cfg.messages) ? cfg.messages : [])
+      .map((item) => String(item).trim())
+      .filter(Boolean)
+      .slice(0, 30)
+  };
+  if (!clean.messages.length) clean.messages = DEFAULT_ANNOUNCEMENTS.slice();
+  try { fs.writeFileSync(ANNOUNCE_FILE, JSON.stringify(clean, null, 2), "utf8"); } catch (error) {}
+  return clean;
+}
+
+let announceTimer = null;
+let announceIndex = 0;
+
+async function announceTick() {
+  const cfg = getAnnounceConfig();
+  if (!cfg.enabled || !RCON_ENABLED || !cfg.messages.length) return;
+  try {
+    const stats = await getStats();
+    if (!stats || !Number(stats.online)) return;
+    const message = cfg.messages[announceIndex % cfg.messages.length];
+    announceIndex += 1;
+    await rcon(`say "${String(message).replace(/"/g, "'")}"`);
+  } catch (error) {
+    /* RCON може бути тимчасово недоступний — пропускаємо цикл. */
+  }
+}
+
+function startAnnounceLoop() {
+  if (announceTimer) clearInterval(announceTimer);
+  const cfg = getAnnounceConfig();
+  announceTimer = setInterval(announceTick, cfg.intervalMinutes * 60 * 1000);
+  if (announceTimer.unref) announceTimer.unref();
+}
+
+/* -------------------------------------------------------- чат-теги ролей
+   Зберігає мапінг ролі → тег/колір для Oxide-плагіна тегів (наприклад Chat Tags).
+   Саме Rust не показує теги біля ніків — це робить плагін на сервері.
+   Сайт зберігає конфіг і може виконати RCON-команду призначення тегу гравцеві. */
+const DEFAULT_TAGS = [
+  { role: "owner", tag: "OWNER", color: "#ff00ff" },
+  { role: "admin", tag: "ADMIN", color: "#ff5ea8" },
+  { role: "moderator", tag: "MDRT", color: "#ffcc00" },
+  { role: "media", tag: "MEDIA", color: "#1488ff" },
+  { role: "other", tag: "", color: "#8fa2bb" }
+];
+
+function getTagsConfig() {
+  const raw = readJson(TAGS_FILE, null);
+  const cfg = raw && typeof raw === "object" ? raw : {};
+  const roles = Array.isArray(cfg.roles) && cfg.roles.length
+    ? cfg.roles.map((item) => ({
+        role: String(item.role || "").trim(),
+        tag: String(item.tag || "").trim(),
+        color: String(item.color || "#8fa2bb").trim()
+      }))
+    : DEFAULT_TAGS.slice();
+  return {
+    roles,
+    commandTemplate: String(cfg.commandTemplate || "chat.tags add {steamId} {tag}").trim() || "chat.tags add {steamId} {tag}"
+  };
+}
+
+function saveTagsConfig(cfg) {
+  const clean = {
+    roles: (Array.isArray(cfg && cfg.roles) ? cfg.roles : [])
+      .map((item) => ({
+        role: String(item.role || "").trim(),
+        tag: String(item.tag || "").trim(),
+        color: String(item.color || "#8fa2bb").trim()
+      }))
+      .filter((item) => item.role),
+    commandTemplate: String(cfg && cfg.commandTemplate || "chat.tags add {steamId} {tag}").trim()
+  };
+  if (!clean.roles.length) clean.roles = DEFAULT_TAGS.slice();
+  try { fs.writeFileSync(TAGS_FILE, JSON.stringify(clean, null, 2), "utf8"); } catch (error) {}
+  return clean;
+}
+
+function buildTagCommand(template, steamId, tag) {
+  return template
+    .replace(/\{steamId\}/g, steamId)
+    .replace(/\{tag\}/g, tag);
+}
+
+/* ----------------------------------------------- керування Rust-сервером
+   Запуск / зупинка / перезапуск RustDedicated.exe прямо з панелі власника.
+   Працює лише локально (власник сайту), на хостингу вимкнене. */
+let rustServerProcess = null;
+
+function getServerControlConfig() {
+  const raw = readJson(SERVER_CONTROL_FILE, null);
+  const cfg = raw && typeof raw === "object" ? raw : {};
+  return {
+    exe: String(cfg.exe || RUST_SERVER_EXE_DEFAULT),
+    dir: String(cfg.dir || RUST_SERVER_DIR_DEFAULT),
+    args: Array.isArray(cfg.args) && cfg.args.length ? cfg.args : RUST_SERVER_ARGS_DEFAULT.slice()
+  };
+}
+
+function saveServerControlConfig(cfg) {
+  const clean = {
+    exe: String(cfg && cfg.exe || RUST_SERVER_EXE_DEFAULT),
+    dir: String(cfg && cfg.dir || RUST_SERVER_DIR_DEFAULT),
+    args: Array.isArray(cfg && cfg.args) ? cfg.args : RUST_SERVER_ARGS_DEFAULT.slice()
+  };
+  try { fs.writeFileSync(SERVER_CONTROL_FILE, JSON.stringify(clean, null, 2), "utf8"); } catch (error) {}
+  return clean;
+}
+
+function rustServerRunning() {
+  if (rustServerProcess && !rustServerProcess.killed && rustServerProcess.exitCode === null) return true;
+  /* Якщо сервер запустили не сайтом — перевіряємо чи є процес у системі. */
+  try {
+    const out = execSync("tasklist /FI \"IMAGENAME eq RustDedicated.exe\" /FO CSV /NH", { encoding: "utf8", windowsHide: true });
+    if (out && out.includes("RustDedicated.exe")) return true;
+  } catch (error) {}
+  return false;
+}
+
+async function killRustServer() {
+  if (rustServerProcess && !rustServerProcess.killed) {
+    try { rustServerProcess.kill("SIGTERM"); } catch (error) {}
+    await new Promise((resolve) => setTimeout(resolve, 2500));
+    if (!rustServerProcess.killed) {
+      try { rustServerProcess.kill("SIGKILL"); } catch (error) {}
+    }
+    rustServerProcess = null;
+  }
+  /* taskkill страхує, якщо сервер був запущений не із сайту. */
+  try {
+    await new Promise((resolve, reject) => {
+      exec("taskkill /F /IM RustDedicated.exe", (error) => resolve());
+    });
+  } catch (error) {}
+  await new Promise((resolve) => setTimeout(resolve, 1500));
+}
+
+async function startRustServer() {
+  if (rustServerRunning()) return { started: false, already: true, pid: rustServerProcess.pid };
+  const cfg = getServerControlConfig();
+  try {
+    rustServerProcess = spawn(cfg.exe, cfg.args, {
+      cwd: cfg.dir,
+      detached: false,
+      stdio: ["ignore", "ignore", "ignore"]
+    });
+    rustServerProcess.unref();
+    rustServerProcess.on("exit", () => { rustServerProcess = null; });
+    await new Promise((resolve) => setTimeout(resolve, 3000));
+    return { started: true, pid: rustServerProcess.pid };
+  } catch (error) {
+    rustServerProcess = null;
+    throw error;
+  }
+}
+
+function saveServerControlLog(action, message) {
+  try { saveAdminLog(OWNER_STEAM_ID, "server-" + action, "", message); } catch (error) {}
+}
+
 function securityHeaders() {
   const headers = {
     "Content-Security-Policy": [
@@ -1059,12 +1477,19 @@ async function getStats() {
       loot: 2,
       stacks: 2,
       uptimeSeconds: 0,
-      entityCount: 0,
-      timestamp: Date.now(),
-      source: "a2s"
+      timestamp: Date.now()
     };
   } else {
-    throw new Error("No stats source configured");
+    result = {
+      online: 0,
+      maxPlayers: 20,
+      map: "Procedural Map",
+      mode: "PvP",
+      loot: 2,
+      stacks: 2,
+      uptimeSeconds: 0,
+      timestamp: Date.now()
+    };
   }
   statsCache = { data: result, at: Date.now() };
   return result;
@@ -1132,11 +1557,79 @@ const server = http.createServer(async (req, res) => {
       publicMode: PUBLIC_MODE,
       rcon: RCON_ENABLED,
       steamLogin: !PUBLIC_MODE,
+      localOwnerLogin: LOCAL_OWNER_LOGIN,
+      ownerSteamId: LOCAL_OWNER_LOGIN ? OWNER_STEAM_ID : "",
       store: !PUBLIC_MODE,
       tickets: !PUBLIC_MODE
     });
     return;
   }
+
+  /* ---------- Мобільний додаток API ---------- */
+
+  if (pathname === "/api/mobile/status" && method === "GET") {
+    try {
+      const stats = await getStats();
+      sendJson(res, 200, {
+        online: stats.online ?? 0,
+        maxPlayers: stats.maxPlayers ?? 20,
+        map: stats.map ?? "Procedural Map",
+        mode: stats.mode ?? "PvP",
+        loot: stats.loot ?? 2,
+        stacks: stats.stacks ?? 2,
+        uptimeSeconds: stats.uptimeSeconds ?? 0,
+        timestamp: stats.timestamp ?? Date.now(),
+        wipeDate: "05.11",
+        plantTickScale: "2"
+      });
+    } catch (error) {
+      sendJson(res, 500, { error: "Не вдалося отримати статус сервера" });
+    }
+    return;
+  }
+
+  if (pathname === "/api/mobile/reports" && method === "GET") {
+    try {
+      const limit = Math.min(Math.max(Number(parsed.searchParams.get("limit")) || 10, 1), 50);
+      const reports = db.prepare("SELECT id, reporterName, targetName, reason, createdAt FROM reports ORDER BY createdAt DESC LIMIT ?").all(limit);
+      sendJson(res, 200, { reports });
+    } catch (error) {
+      sendJson(res, 500, { error: "Не вдалося отримати репорти" });
+    }
+    return;
+  }
+
+  if (pathname === "/api/mobile/overview" && method === "GET") {
+    const session = getSteamSession(req);
+    if (!session || session.steamId !== OWNER_STEAM_ID) {
+      sendJson(res, 403, { error: "Owner only" });
+      return;
+    }
+    try {
+      const stats = await getStats();
+      const overview = {
+        online: stats.online,
+        maxPlayers: stats.maxPlayers,
+        reports: {
+          total: db.prepare("SELECT COUNT(*) AS count FROM reports").get().count,
+          open: db.prepare("SELECT COUNT(*) AS count FROM reports WHERE status = 'open'").get().count
+        },
+        tickets: {
+          total: db.prepare("SELECT COUNT(*) AS count FROM tickets").get().count,
+          pending: db.prepare("SELECT COUNT(*) AS count FROM tickets WHERE status = 'pending'").get().count
+        },
+        accounts: db.prepare("SELECT COUNT(*) AS count FROM accounts").get().count,
+        bans: db.prepare("SELECT COUNT(*) AS count FROM bans").get().count,
+        timestamp: Date.now()
+      };
+      sendJson(res, 200, overview);
+    } catch (error) {
+      sendJson(res, 500, { error: "Не вдалося отримати огляд" });
+    }
+    return;
+  }
+
+  /* ---------- КІНЕЦЬ мобільного API ---------- */
 
   if (pathname === "/api/steam/login" && method === "GET") {
     if (PUBLIC_MODE) {
@@ -1289,7 +1782,16 @@ const server = http.createServer(async (req, res) => {
       }
       const token = crypto.randomBytes(24).toString("hex");
       adminTokens.add(token);
-      sendJson(res, 200, { token });
+      const payload = { token };
+      /* Локально: пароль адмінки = вхід власника, щоб кабінет працював
+         без Steam OpenID (який не працює через LAN-IP). */
+      if (LOCAL_OWNER_LOGIN && OWNER_STEAM_ID) {
+        const sessionToken = createSteamSession(OWNER_STEAM_ID);
+        res.setHeader("Set-Cookie", sessionCookie(sessionToken, Math.floor(SESSION_TTL_MS / 1000)));
+        payload.steamId = OWNER_STEAM_ID;
+        payload.ownerLogin = true;
+      }
+      sendJson(res, 200, payload);
     } catch (error) {
       sendJson(res, 400, { error: String(error.message || error) });
     }
@@ -1342,6 +1844,49 @@ const server = http.createServer(async (req, res) => {
       sendJson(res, 200, leaderboard);
     } catch (error) {
       sendJson(res, 503, { error: "Leaderboard unavailable", message: String(error?.message ?? error) });
+    }
+    return;
+  }
+
+  if (pathname === "/api/maps" && method === "GET") {
+    const url = new URL(req.url, `http://${req.headers.host}`);
+    const server = url.searchParams.get("server") || "nexus";
+    sendJson(res, 200, getMapVoteState(req, server, res));
+    return;
+  }
+
+  if (pathname === "/api/maps/vote" && method === "POST") {
+    if (!rateLimit(req, "maps-vote", 40)) {
+      sendJson(res, 429, { error: "Занадто часто. Спробуй пізніше." });
+      return;
+    }
+    const voterId = ensureVoterId(req, res);
+    if (!voterId) {
+      sendJson(res, 401, { error: "Увійди через Steam, щоб голосувати." });
+      return;
+    }
+    try {
+      const body = await readBody(req);
+      const mapId = String(body.mapId || "").trim().slice(0, 80);
+      const server = String(body.server || "nexus").trim().slice(0, 80);
+      const content = getMapsContent(server);
+      const vote = content.vote || {};
+      const closesAt = vote.closesAt ? Date.parse(vote.closesAt) : 0;
+      if (String(vote.status || "closed") !== "open" || (closesAt && closesAt < Date.now())) {
+        sendJson(res, 400, { error: "Голосування закрито." });
+        return;
+      }
+      const candidate = (Array.isArray(vote.candidates) ? vote.candidates : [])
+        .find((item) => String(item.id) === mapId);
+      if (!candidate) {
+        sendJson(res, 400, { error: "Такої мапи немає в голосуванні." });
+        return;
+      }
+      db.prepare("INSERT OR REPLACE INTO map_votes (steamId, mapId, server, updatedAt) VALUES (?, ?, ?, ?)")
+        .run(voterId, mapId, server, new Date().toISOString());
+      sendJson(res, 200, getMapVoteState(req, server, res));
+    } catch (error) {
+      sendJson(res, 400, { error: String(error.message || error) });
     }
     return;
   }
@@ -1576,10 +2121,493 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
+  /* ============================================================
+     МОБІЛЬНИЙ ДОДАТОК API — повна аналитика та керування сервером
+     ============================================================ */
+
+  // Повний статус сервера для мобільного додатку
+  if (pathname === "/api/mobile/status" && method === "GET") {
+    try {
+      const stats = await getStats();
+      const now = Date.now();
+      sendJson(res, 200, {
+        online: stats.online ?? 0,
+        maxPlayers: stats.maxPlayers ?? 20,
+        map: stats.map ?? "Procedural Map",
+        mode: stats.mode ?? "PvP",
+        loot: stats.loot ?? 2,
+        stacks: stats.stacks ?? 2,
+        plantTickScale: stats.plantTickScale ?? 2,
+        uptimeSeconds: stats.uptimeSeconds ?? 0,
+        timestamp: now,
+        serverIp: SERVER_QUERY_HOST || "5.199.233.1",
+        serverPort: SERVER_QUERY_PORT || 28017,
+        rconPort: 28016,
+        hostname: "UNITY RUST | MAX 16 | [WIPE 05.11]"
+      });
+    } catch (error) {
+      sendJson(res, 500, { error: "Не вдалося отримати статус сервера: " + String(error.message || error) });
+    }
+    return;
+  }
+
+  // Список гравців онлайн для мобільного додатку
+  if (pathname === "/api/mobile/players" && method === "GET") {
+    try {
+      const stats = await getStats();
+      // Спробуємо отримати список гравців через RCON або з файлу
+      let players = [];
+      if (RCON_ENABLED) {
+        try {
+          const text = await rcon("players");
+          const data = JSON.parse(text);
+          players = (data.Players || []).map((p, i) => ({
+            id: i,
+            name: p.Name || "Unknown",
+            steamId: p.SteamID || "",
+            ping: p.Ping || 0,
+            time: p.Time || 0
+          }));
+        } catch (e) {
+          players = [];
+        }
+      } else {
+        // Фолбек: читаємо з файлу players.json якщо є
+        try {
+          const fs = require("fs");
+          const data = JSON.parse(fs.readFileSync(PLAYERS_FILE, "utf8"));
+          players = Object.entries(data.Players || {}).slice(0, 30).map(([id, p]) => ({
+            id: id,
+            name: p.Name || "Unknown",
+            steamId: id,
+            ping: p.Ping || 0,
+            time: p.Hours || 0
+          }));
+        } catch (e) {
+          players = [];
+        }
+      }
+      sendJson(res, 200, { players, count: players.length, timestamp: Date.now() });
+    } catch (error) {
+      sendJson(res, 500, { error: "Не вдалося отримати список гравців" });
+    }
+    return;
+  }
+
+  // Репорти на читерів для мобільного додатку
+  if (pathname === "/api/mobile/reports" && method === "GET") {
+    try {
+      const limit = Math.min(Math.max(Number(parsed.searchParams.get("limit")) || 10, 1), 50);
+      const reports = db.prepare("SELECT id, reporterName, reporterSteamId, targetName, targetSteamId, reason, createdAt, status FROM reports ORDER BY createdAt DESC LIMIT ?").all(limit);
+      sendJson(res, 200, { reports, count: reports.length });
+    } catch (error) {
+      sendJson(res, 500, { error: "Не вдалося отримати репорти" });
+    }
+    return;
+  }
+
+  // Повна аналiтична панель для мобільного додатку
+  if (pathname === "/api/mobile/overview" && method === "GET") {
+    const session = getSteamSession(req);
+    if (!session || session.steamId !== OWNER_STEAM_ID) {
+      sendJson(res, 403, { error: "Тільки власник сервера" });
+      return;
+    }
+    try {
+      const stats = await getStats();
+      const overview = {
+        server: {
+          online: stats.online ?? 0,
+          maxPlayers: stats.maxPlayers ?? 20,
+          map: stats.map ?? "Procedural Map",
+          mode: stats.mode ?? "PvP",
+          loot: stats.loot ?? 2,
+          stacks: stats.stacks ?? 2,
+          plantTickScale: stats.plantTickScale ?? 2,
+          uptimeSeconds: stats.uptimeSeconds ?? 0,
+          timestamp: Date.now(),
+          hostname: "UNITY RUST | MAX 16 | [WIPE 05.11]"
+        },
+        economy: {
+          purchases: { count: 0, total: 0 },
+          tickets: { total: 0, pending: 0 },
+          reports: { total: 0, open: 0 },
+          bans: 0,
+          accounts: 0,
+          offices: 0
+        },
+        reports: []
+      };
+      try {
+        overview.economy.purchases = db.prepare("SELECT COUNT(*) AS count, COALESCE(SUM(total), 0) AS sum FROM purchases").get();
+      } catch (e) {}
+      try {
+        overview.economy.tickets.total = db.prepare("SELECT COUNT(*) AS count FROM tickets").get().count;
+        overview.economy.tickets.pending = db.prepare("SELECT COUNT(*) AS count FROM tickets WHERE status = 'pending'").get().count;
+      } catch (e) {}
+      try {
+        overview.economy.reports.total = db.prepare("SELECT COUNT(*) AS count FROM reports").get().count;
+        overview.economy.reports.open = db.prepare("SELECT COUNT(*) AS count FROM reports WHERE status = 'open'").get().count;
+      } catch (e) {}
+      try {
+        overview.economy.bans = db.prepare("SELECT COUNT(*) AS count FROM bans").get().count;
+      } catch (e) {}
+      try {
+        overview.economy.accounts = db.prepare("SELECT COUNT(*) AS count FROM accounts").get().count;
+      } catch (e) {}
+      try {
+        overview.economy.offices = db.prepare("SELECT COUNT(*) AS count FROM offices").get().count;
+      } catch (e) {}
+      try {
+        overview.reports = db.prepare("SELECT id, reporterName, targetName, reason, createdAt, status FROM reports ORDER BY createdAt DESC LIMIT 10").all();
+      } catch (e) {}
+      sendJson(res, 200, overview);
+    } catch (error) {
+      sendJson(res, 500, { error: "Не вдалося отримати огляд" });
+    }
+    return;
+  }
+
+  // Виконати команду на сервері (RCON) — тільки власник
+  if (pathname === "/api/mobile/command" && method === "POST") {
+    const session = getSteamSession(req);
+    if (!session || session.steamId !== OWNER_STEAM_ID) {
+      sendJson(res, 403, { error: "Тільки власник сервера" });
+      return;
+    }
+    try {
+      const body = await readBody(req);
+      const cmd = String(body.cmd || "").trim();
+      if (!cmd) { sendJson(res, 400, { error: "Команда не вказана" }); return; }
+      if (!RCON_ENABLED) { sendJson(res, 503, { error: "RCON не налаштований" }); return; }
+      const result = await rcon(cmd);
+      sendJson(res, 200, { ok: true, command: cmd, result: result });
+    } catch (error) {
+      sendJson(res, 500, { error: "Помилка виконання команди: " + String(error.message || error) });
+    }
+    return;
+  }
+
+  // Аватарка гравця через Steam проксі
+  if (pathname === "/api/mobile/avatar" && method === "GET") {
+    const steamId = normalizeSteamId(parsed.searchParams.get("steamId"));
+    if (!steamId) { sendJson(res, 400, { error: "steamId потрібен" }); return; }
+    try {
+      // Редірект на існуючий аватар-проксі сайту
+      res.writeHead(302, { Location: "/api/avatar?steamId=" + steamId });
+      res.end();
+      return;
+    } catch (error) {
+      sendJson(res, 500, { error: "Помилка завантаження аватарки" });
+    }
+    return;
+  }
+
+  /* ============================================================
+     КІНЕЦЬ мобільного API
+     ============================================================ */
+
   if (pathname === "/api/admin/logs" && method === "GET") {
     if (!isAdmin(req)) { sendJson(res, 403, { error: "Admin only" }); return; }
     const logs = getAdminLogs();
     sendJson(res, 200, { logs });
+    return;
+  }
+
+  /* ============================================================
+     ПАНЕЛЬ ВЛАСНИКА — повний набір інструментів
+     ============================================================ */
+
+  if (pathname === "/api/owner/staff" && method === "GET") {
+    if (!isOwnerRequest(req)) { sendJson(res, 403, { error: "Owner only" }); return; }
+    const staff = Object.values(getOffices()).map(stripToken);
+    const accounts = db.prepare("SELECT steamId, discord, discordId, telegram, steamLinked, createdAt FROM accounts ORDER BY createdAt DESC LIMIT 500").all();
+    const tickets = getTickets().map(stripToken);
+    sendJson(res, 200, { staff, accounts, tickets });
+    return;
+  }
+
+  if (pathname === "/api/owner/staff" && method === "POST") {
+    if (!isOwnerRequest(req)) { sendJson(res, 403, { error: "Owner only" }); return; }
+    try {
+      const body = await readBody(req);
+      const steamId = normalizeSteamId(body.steamId);
+      if (!steamId) { sendJson(res, 400, { error: "steamId required" }); return; }
+      const offices = getOffices();
+      const office = offices[steamId];
+      if (!office) { sendJson(res, 404, { error: "Співробітника не знайдено" }); return; }
+      let role = normalizeRole(body.role || office.role);
+      let status = String(body.status || office.status);
+      if (status !== "active" && status !== "blocked") status = office.status;
+      if (steamId === OWNER_STEAM_ID) { role = "owner"; status = "active"; }
+      offices[steamId] = { ...office, role, status };
+      saveOffices(offices);
+      saveAdminLog(OWNER_STEAM_ID, "staff-update", steamId, role + "/" + status);
+      sendJson(res, 200, { office: stripToken(offices[steamId]) });
+    } catch (error) {
+      sendJson(res, 400, { error: String(error.message || error) });
+    }
+    return;
+  }
+
+  if (pathname === "/api/owner/staff/add" && method === "POST") {
+    if (!isOwnerRequest(req)) { sendJson(res, 403, { error: "Owner only" }); return; }
+    try {
+      const body = await readBody(req);
+      const steamId = normalizeSteamId(body.steamId);
+      if (!steamId) { sendJson(res, 400, { error: "Потрібен SteamID64" }); return; }
+      const offices = getOffices();
+      if (offices[steamId]) { sendJson(res, 400, { error: "Такий акаунт уже є" }); return; }
+      const role = normalizeRole(body.role || "moderator");
+      offices[steamId] = {
+        steamId,
+        discord: String(body.discord || "").trim().slice(0, 100),
+        role,
+        token: makeToken(),
+        status: "active",
+        ticketId: null,
+        createdAt: new Date().toISOString()
+      };
+      saveOffices(offices);
+      saveAdminLog(OWNER_STEAM_ID, "staff-add", steamId, role);
+      sendJson(res, 201, { office: stripToken(offices[steamId]) });
+    } catch (error) {
+      sendJson(res, 400, { error: String(error.message || error) });
+    }
+    return;
+  }
+
+  const staffDeleteMatch = pathname.match(/^\/api\/owner\/staff\/([^/]+)$/);
+  if (staffDeleteMatch && method === "DELETE") {
+    if (!isOwnerRequest(req)) { sendJson(res, 403, { error: "Owner only" }); return; }
+    const steamId = normalizeSteamId(decodeURIComponent(staffDeleteMatch[1]));
+    if (!steamId) { sendJson(res, 400, { error: "Некоректний SteamID" }); return; }
+    if (steamId === OWNER_STEAM_ID) { sendJson(res, 400, { error: "Не можна видалити власника" }); return; }
+    const offices = getOffices();
+    if (!offices[steamId]) { sendJson(res, 404, { error: "Акаунт не знайдено" }); return; }
+    delete offices[steamId];
+    saveOffices(offices);
+    saveAdminLog(OWNER_STEAM_ID, "staff-remove", steamId, "");
+    sendJson(res, 200, { ok: true });
+    return;
+  }
+
+  if (pathname === "/api/owner/rcon" && method === "POST") {
+    if (!isOwnerRequest(req)) { sendJson(res, 403, { error: "Owner only" }); return; }
+    try {
+      const body = await readBody(req);
+      const command = String(body.command || body.cmd || "").trim();
+      if (!command) { sendJson(res, 400, { error: "Команда не вказана" }); return; }
+      if (command.length > 500) { sendJson(res, 400, { error: "Команда занадто довга" }); return; }
+      if (!RCON_ENABLED) { sendJson(res, 503, { error: "RCON не налаштований" }); return; }
+      const result = await rcon(command);
+      saveAdminLog(OWNER_STEAM_ID, "rcon", "", command.slice(0, 200));
+      sendJson(res, 200, { ok: true, command, result });
+    } catch (error) {
+      sendJson(res, 503, { error: "RCON: " + String(error?.message || error) });
+    }
+    return;
+  }
+
+  if (pathname === "/api/owner/shop" && method === "GET") {
+    if (!isOwnerRequest(req)) { sendJson(res, 403, { error: "Owner only" }); return; }
+    const promos = db.prepare("SELECT * FROM promos ORDER BY createdAt DESC").all();
+    const activations = db.prepare("SELECT * FROM promo_activations ORDER BY activatedAt DESC LIMIT 200").all();
+    const purchases = db.prepare("SELECT * FROM purchases ORDER BY createdAt DESC LIMIT 200").all();
+    sendJson(res, 200, { promos, activations, purchases });
+    return;
+  }
+
+  if (pathname === "/api/owner/promo" && method === "POST") {
+    if (!isOwnerRequest(req)) { sendJson(res, 403, { error: "Owner only" }); return; }
+    try {
+      const body = await readBody(req);
+      const code = String(body.code || "").trim().toUpperCase().slice(0, 20);
+      const maxActivations = Math.max(1, Number(body.maxActivations) || 50);
+      const description = String(body.description || "").trim().slice(0, 200);
+      if (!code) { sendJson(res, 400, { error: "Вкажи код промокоду" }); return; }
+      const existing = db.prepare("SELECT id FROM promos WHERE code = ?").get(code);
+      if (existing) { sendJson(res, 400, { error: "Промокод вже існує" }); return; }
+      const id = Date.now().toString(36) + crypto.randomBytes(3).toString("hex");
+      db.prepare("INSERT INTO promos (id, code, ownerSteamId, ownerRole, activations, maxActivations, description, createdAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?)")
+        .run(id, code, OWNER_STEAM_ID, "owner", 0, maxActivations, description, new Date().toISOString());
+      sendJson(res, 201, { promo: { id, code, maxActivations, description, activations: 0 } });
+    } catch (error) {
+      sendJson(res, 400, { error: String(error.message || error) });
+    }
+    return;
+  }
+
+  if (pathname === "/api/owner/announce" && method === "GET") {
+    if (!isOwnerRequest(req)) { sendJson(res, 403, { error: "Owner only" }); return; }
+    sendJson(res, 200, getAnnounceConfig());
+    return;
+  }
+
+  if (pathname === "/api/owner/announce" && method === "POST") {
+    if (!isOwnerRequest(req)) { sendJson(res, 403, { error: "Owner only" }); return; }
+    try {
+      const body = await readBody(req);
+      const saved = saveAnnounceConfig(body);
+      startAnnounceLoop();
+      saveAdminLog(OWNER_STEAM_ID, "announce-save", "", `${saved.enabled ? "on" : "off"}/${saved.intervalMinutes}хв`);
+      sendJson(res, 200, saved);
+    } catch (error) {
+      sendJson(res, 400, { error: String(error.message || error) });
+    }
+    return;
+  }
+
+  if (pathname === "/api/owner/announce/test" && method === "POST") {
+    if (!isOwnerRequest(req)) { sendJson(res, 403, { error: "Owner only" }); return; }
+    try {
+      const cfg = getAnnounceConfig();
+      if (!cfg.messages.length) { sendJson(res, 400, { error: "Немає повідомлень" }); return; }
+      if (!RCON_ENABLED) { sendJson(res, 503, { error: "RCON не налаштований" }); return; }
+      const message = cfg.messages[announceIndex % cfg.messages.length];
+      announceIndex += 1;
+      const result = await rcon(`say "${String(message).replace(/"/g, "'")}"`);
+      sendJson(res, 200, { ok: true, message, result });
+    } catch (error) {
+      sendJson(res, 503, { error: "RCON: " + String(error?.message || error) });
+    }
+    return;
+  }
+
+  /* ============================================================
+     КЕРУВАННЯ RUST-СЕРВЕРОМ (тільки власник)
+     ============================================================ */
+
+  if (pathname.startsWith("/api/owner/server/") && !LOCAL_CONTROL_ENABLED) {
+    sendJson(res, 503, { error: "Керування сервером доступне лише на локальній машині." });
+    return;
+  }
+
+  if (pathname === "/api/owner/server/status" && method === "GET") {
+    if (!isOwnerRequest(req)) { sendJson(res, 403, { error: "Owner only" }); return; }
+    sendJson(res, 200, {
+      running: rustServerRunning(),
+      pid: rustServerProcess ? rustServerProcess.pid : null,
+      rcon: RCON_ENABLED
+    });
+    return;
+  }
+
+  if (pathname === "/api/owner/server/config" && method === "GET") {
+    if (!isOwnerRequest(req)) { sendJson(res, 403, { error: "Owner only" }); return; }
+    sendJson(res, 200, getServerControlConfig());
+    return;
+  }
+
+  if (pathname === "/api/owner/server/config" && method === "POST") {
+    if (!isOwnerRequest(req)) { sendJson(res, 403, { error: "Owner only" }); return; }
+    try {
+      const body = await readBody(req);
+      const saved = saveServerControlConfig(body);
+      saveAdminLog(OWNER_STEAM_ID, "server-config", "", "exe/dir/args оновлено");
+      sendJson(res, 200, saved);
+    } catch (error) {
+      sendJson(res, 400, { error: String(error.message || error) });
+    }
+    return;
+  }
+
+  if (pathname === "/api/owner/server/start" && method === "POST") {
+    if (!isOwnerRequest(req)) { sendJson(res, 403, { error: "Owner only" }); return; }
+    try {
+      const result = await startRustServer();
+      saveServerControlLog(result.already ? "start-already" : "start", result.started ? "запущено" : "вже працює");
+      sendJson(res, 200, result);
+    } catch (error) {
+      saveServerControlLog("start-error", String(error?.message || error));
+      sendJson(res, 503, { error: "Не вдалося запустити сервер: " + String(error?.message || error) });
+    }
+    return;
+  }
+
+  if (pathname === "/api/owner/server/stop" && method === "POST") {
+    if (!isOwnerRequest(req)) { sendJson(res, 403, { error: "Owner only" }); return; }
+    try {
+      if (RCON_ENABLED) {
+        try { await rcon("server.save"); } catch (error) {}
+      }
+      await killRustServer();
+      saveServerControlLog("stop", "зупинено");
+      sendJson(res, 200, { stopped: true });
+    } catch (error) {
+      sendJson(res, 503, { error: "Не вдалося зупинити сервер: " + String(error?.message || error) });
+    }
+    return;
+  }
+
+  if (pathname === "/api/owner/server/restart" && method === "POST") {
+    if (!isOwnerRequest(req)) { sendJson(res, 403, { error: "Owner only" }); return; }
+    try {
+      if (RCON_ENABLED) {
+        try { await rcon("server.save"); } catch (error) {}
+      }
+      await killRustServer();
+      const result = await startRustServer();
+      saveServerControlLog("restart", "перезапущено");
+      sendJson(res, 200, { restarted: true, ...result });
+    } catch (error) {
+      saveServerControlLog("restart-error", String(error?.message || error));
+      sendJson(res, 503, { error: "Не вдалося перезапустити сервер: " + String(error?.message || error) });
+    }
+    return;
+  }
+
+  if (pathname === "/api/owner/tags" && method === "GET") {
+    if (!isOwnerRequest(req)) { sendJson(res, 403, { error: "Owner only" }); return; }
+    sendJson(res, 200, getTagsConfig());
+    return;
+  }
+
+  if (pathname === "/api/owner/tags" && method === "POST") {
+    if (!isOwnerRequest(req)) { sendJson(res, 403, { error: "Owner only" }); return; }
+    try {
+      const body = await readBody(req);
+      const saved = saveTagsConfig(body);
+      saveAdminLog(OWNER_STEAM_ID, "tags-save", "", `roles=${saved.roles.length}`);
+      sendJson(res, 200, saved);
+    } catch (error) {
+      sendJson(res, 400, { error: String(error.message || error) });
+    }
+    return;
+  }
+
+  if (pathname === "/api/owner/tag/assign" && method === "POST") {
+    if (!isOwnerRequest(req)) { sendJson(res, 403, { error: "Owner only" }); return; }
+    try {
+      const body = await readBody(req);
+      const steamId = normalizeSteamId(body.steamId);
+      if (!steamId) { sendJson(res, 400, { error: "Некоректний SteamID64" }); return; }
+      const tag = String(body.tag || "").trim();
+      if (!tag) { sendJson(res, 400, { error: "Вкажи тег" }); return; }
+      const cfg = getTagsConfig();
+      const command = buildTagCommand(cfg.commandTemplate, steamId, tag);
+      const result = await rcon(command);
+      saveAdminLog(OWNER_STEAM_ID, "tag-assign", steamId, `${tag} via ${command}`);
+      sendJson(res, 200, { ok: true, command, result });
+    } catch (error) {
+      sendJson(res, 503, { error: "RCON: " + String(error?.message || error) });
+    }
+    return;
+  }
+
+  const banDeleteMatch = pathname.match(/^\/api\/bans\/([^/]+)$/);
+  if (banDeleteMatch && method === "DELETE") {
+    if (!isAdmin(req)) { sendJson(res, 403, { error: "Admin only" }); return; }
+    const bans = getBans();
+    const ban = bans.find((item) => item.id === banDeleteMatch[1]);
+    if (!ban) { sendJson(res, 404, { error: "Бан не знайдено" }); return; }
+    saveBans(bans.filter((item) => item.id !== ban.id));
+    try {
+      const target = String(ban.target || "");
+      await rcon(normalizeSteamId(target) ? `unban ${target}` : `unban "${target.replace(/"/g, "'")}"`);
+    } catch (error) {}
+    saveAdminLog(OWNER_STEAM_ID, "unban", ban.target, "знято з панелі власника");
+    sendJson(res, 200, { ok: true });
     return;
   }
 
@@ -1719,8 +2747,8 @@ const server = http.createServer(async (req, res) => {
 
     /* Власник отримує кабінет автоматично, але лише зі своєї сесії.
        Інакше достатньо було передати ?steamId=<публічний ID власника>. */
-    if (steamId === OWNER_STEAM_ID && sessionMatches) {
-      if (!office || office.status !== "active") {
+    if (steamId === OWNER_STEAM_ID && (sessionMatches || admin)) {
+      if (!office || office.status !== "active" || normalizeRole(office.role) !== "owner") {
         offices[steamId] = {
           steamId,
           discord: (office && office.discord) || "",
@@ -1790,7 +2818,8 @@ const server = http.createServer(async (req, res) => {
       const sessionMatches = Boolean(session && session.steamId === steamId);
       const tokenMatches = Boolean(office && token && office.token === token);
       const isOwner = Boolean(session && session.steamId === OWNER_STEAM_ID);
-      if (!office || office.status !== "active" || (!tokenMatches && !sessionMatches && !isOwner)) {
+      const admin = isAdmin(req);
+      if (!office || office.status !== "active" || (!tokenMatches && !sessionMatches && !isOwner && !admin)) {
         sendJson(res, 403, { error: "Кабінет неактивний або немає доступу." });
         return;
       }
@@ -2288,7 +3317,9 @@ const server = http.createServer(async (req, res) => {
     const isPublicFile =
       relativePath === "index.html" ||
       relativePath === "i18n-phrases.js" ||
-      /^images\/[^/]+$/.test(relativePath) ||
+      relativePath === "manifest.json" ||
+      relativePath === "sw.js" ||
+      /^images\/(?:maps\/)?[^/]+$/.test(relativePath) ||
       /^videos\/[^/]+$/.test(relativePath);
     const canServe = within && !hasDotSegment && isPublicFile && ext && MIME_TYPES[ext];
 
@@ -2343,6 +3374,8 @@ server.listen(PORT, HOST, () => {
   console.log(`data dir: ${DATA_DIR}`);
   console.log(`database: ${DB_IN_MEMORY ? "memory (без збереження після рестарту)" : path.join(DATA_DIR, "nexus.db")}`);
   console.log(`RCON: ${RCON_ENABLED ? "configured" : "disabled"}`);
+  startAnnounceLoop();
+  console.log(`auto-announce: ${getAnnounceConfig().enabled ? "on" : "off"} / ${getAnnounceConfig().intervalMinutes} min`);
 });
 
 /* Discord gateway: бот онлайн, поки запущений сервіс.
