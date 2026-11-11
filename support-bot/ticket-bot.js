@@ -60,6 +60,9 @@ const STAFF_ROLE_IDS = (process.env.STAFF_ROLE_ID || "")
   .split(",")
   .map((id) => id.trim())
   .filter(Boolean);
+  .split(",")
+  .map((id) => id.trim())
+  .filter(Boolean);
 const TICKET_CATEGORY_NAME = process.env.TICKET_CATEGORY_NAME || "Тикеты / Tickets";
 const TICKET_CATEGORY_ID = process.env.TICKET_CATEGORY_ID;
 const LOG_CHANNEL_ID = process.env.LOG_CHANNEL_ID || "";
@@ -452,7 +455,8 @@ function modColor(action) {
 }
 
 async function handleWarnSlash(interaction) {
-  if (!isStaff(interaction.member)) return interaction.reply({ content: ruen("Лиш персонал може видавати варнінги.", "Only staff can warn."), ephemeral: true });
+  await interaction.deferReply({ flags: 64 });
+  if (!isStaff(interaction.member)) return interaction.editReply({ content: ruen("Лиш персонал може видавати варнінги.", "Only staff can warn.") });
   const target = interaction.options.getUser("user"); const reason = interaction.options.getString("причина") || "";
   addModeration(interaction.guildId, target.id, target.tag, interaction.user.id, interaction.user.tag, "warn", reason);
   const embed = new EmbedBuilder().setColor(modColor("warn")).setTitle(`${modEmoji("warn")} Варнінг / Warning`);
@@ -460,12 +464,13 @@ async function handleWarnSlash(interaction) {
   embed.addFields({ name: "Модератор / Moderator", value: `<@${interaction.user.id}>`, inline: true });
   embed.addFields({ name: "Причина / Reason", value: reason || "—", inline: false });
   embed.setTimestamp();
-  await interaction.reply({ content: ruen("Варнінг видано.", "Warning issued."), embeds: [embed] });
+  await interaction.editReply({ content: ruen("Варнінг видано.", "Warning issued."), embeds: [embed] });
   await sendModLog(interaction.guild, embed);
 }
 
 async function handleMuteSlash(interaction) {
-  if (!isStaff(interaction.member)) return interaction.reply({ content: ruen("Лиш персонал може мутити.", "Only staff can mute."), ephemeral: true });
+  await interaction.deferReply({ flags: 64 });
+  if (!isStaff(interaction.member)) return interaction.editReply({ content: ruen("Лиш персонал може мутити.", "Only staff can mute.") });
   const target = interaction.options.getUser("user"); const hours = interaction.options.getInteger("години") || 24; const reason = interaction.options.getString("причина") || "";
   let dr = "";
   try { const gm = await interaction.guild.members.fetch(target.id).catch(() => null); if (gm) { await gm.timeout(hours * 60 * 60 * 1000, reason); dr = "Тайм-аут встановлено в Discord."; } else { dr = "Користувач не знайдений на сервері Discord."; } } catch(e) { dr = `Помилка Discord: ${e.message}`; }
@@ -477,12 +482,13 @@ async function handleMuteSlash(interaction) {
   embed.addFields({ name: "Причина / Reason", value: reason || "—", inline: false });
   embed.addFields({ name: "Discord", value: dr, inline: false });
   embed.setTimestamp();
-  await interaction.reply({ content: ruen("Користувача замучено.", "User muted."), embeds: [embed] });
+  await interaction.editReply({ content: ruen("Користувача замучено.", "User muted."), embeds: [embed] });
   await sendModLog(interaction.guild, embed);
 }
 
 async function handleUnmuteSlash(interaction) {
-  if (!isStaff(interaction.member)) return interaction.reply({ content: ruen("Лиш персонал може знімати мут.", "Only staff can unmute."), ephemeral: true });
+  await interaction.deferReply({ flags: 64 });
+  if (!isStaff(interaction.member)) return interaction.editReply({ content: ruen("Лиш персонал може знімати мут.", "Only staff can unmute.") });
   const target = interaction.options.getUser("user"); const reason = interaction.options.getString("причина") || "";
   let dr = "";
   try { const gm = await interaction.guild.members.fetch(target.id).catch(() => null); if (gm) { await gm.timeout(null, reason); dr = "Тайм-аут знято в Discord."; } else { dr = "Користувач не знайдений на сервері Discord."; } } catch(e) { dr = `Помилка Discord: ${e.message}`; }
@@ -493,12 +499,13 @@ async function handleUnmuteSlash(interaction) {
   embed.addFields({ name: "Причина / Reason", value: reason || "—", inline: false });
   embed.addFields({ name: "Discord", value: dr, inline: false });
   embed.setTimestamp();
-  await interaction.reply({ content: ruen("Мут знято.", "Unmuted."), embeds: [embed] });
+  await interaction.editReply({ content: ruen("Мут знято.", "Unmuted."), embeds: [embed] });
   await sendModLog(interaction.guild, embed);
 }
 
 async function handleBanSlash(interaction) {
-  if (!isStaff(interaction.member)) return interaction.reply({ content: ruen("Лиш персонал може банити.", "Only staff can ban."), ephemeral: true });
+  await interaction.deferReply({ flags: 64 });
+  if (!isStaff(interaction.member)) return interaction.editReply({ content: ruen("Лиш персонал може банити.", "Only staff can ban.") });
   const target = interaction.options.getUser("user"); const days = interaction.options.getInteger("дні") || 7; const reason = interaction.options.getString("причина") || "";
   let dr = "";
   try { await interaction.guild.members.ban(target.id, { days: days > 0 ? days : 0, reason }); dr = days > 0 ? `Бан на ${days} днів.` : "Перманентний бан."; } catch(e) { dr = `Помилка Discord: ${e.message}`; }
@@ -510,12 +517,13 @@ async function handleBanSlash(interaction) {
   embed.addFields({ name: "Причина / Reason", value: reason || "—", inline: false });
   embed.addFields({ name: "Discord", value: dr, inline: false });
   embed.setTimestamp();
-  await interaction.reply({ content: ruen("Користувача забанено.", "User banned."), embeds: [embed] });
+  await interaction.editReply({ content: ruen("Користувача забанено.", "User banned."), embeds: [embed] });
   await sendModLog(interaction.guild, embed);
 }
 
 async function handleUnbanSlash(interaction) {
-  if (!isStaff(interaction.member)) return interaction.reply({ content: ruen("Лиш персонал може розбанити.", "Only staff can unban."), ephemeral: true });
+  await interaction.deferReply({ flags: 64 });
+  if (!isStaff(interaction.member)) return interaction.editReply({ content: ruen("Лиш персонал може розбанити.", "Only staff can unban.") });
   const target = interaction.options.getUser("user"); const reason = interaction.options.getString("причина") || "";
   let dr = "";
   try { await interaction.guild.members.removeBan(target.id, reason); dr = "Бан знято в Discord."; } catch(e) { dr = `Помилка Discord: ${e.message}`; }
@@ -526,12 +534,13 @@ async function handleUnbanSlash(interaction) {
   embed.addFields({ name: "Причина / Reason", value: reason || "—", inline: false });
   embed.addFields({ name: "Discord", value: dr, inline: false });
   embed.setTimestamp();
-  await interaction.reply({ content: ruen("Користувача розбанено.", "User unbanned."), embeds: [embed] });
+  await interaction.editReply({ content: ruen("Користувача розбанено.", "User unbanned."), embeds: [embed] });
   await sendModLog(interaction.guild, embed);
 }
 
 async function handleKickSlash(interaction) {
-  if (!isStaff(interaction.member)) return interaction.reply({ content: ruen("Лиш персонал може кикнути.", "Only staff can kick."), ephemeral: true });
+  await interaction.deferReply({ flags: 64 });
+  if (!isStaff(interaction.member)) return interaction.editReply({ content: ruen("Лиш персонал може кикнути.", "Only staff can kick.") });
   const target = interaction.options.getUser("user"); const reason = interaction.options.getString("причина") || "";
   let dr = "";
   try { await interaction.guild.members.kick(target.id, reason); dr = "Користувача кикнуто з сервера Discord."; } catch(e) { dr = `Помилка Discord: ${e.message}`; }
@@ -542,7 +551,7 @@ async function handleKickSlash(interaction) {
   embed.addFields({ name: "Причина / Reason", value: reason || "—", inline: false });
   embed.addFields({ name: "Discord", value: dr, inline: false });
   embed.setTimestamp();
-  await interaction.reply({ content: ruen("Користувача кикнуто.", "User kicked."), embeds: [embed] });
+  await interaction.editReply({ content: ruen("Користувача кикнуто.", "User kicked."), embeds: [embed] });
   await sendModLog(interaction.guild, embed);
 }
 
@@ -654,6 +663,7 @@ async function sendBetaToChannels(interactionObj, embed) {
 }
 
 async function handleBetaClanModalSubmit(interaction) {
+  await interaction.deferReply({ flags: 64 });
   const clanTag = interaction.fields.getTextInputValue("clan_tag").trim();
   const clanName = interaction.fields.getTextInputValue("clan_name").trim();
   const allSteamRaw = interaction.fields.getTextInputValue("all_steamid").trim();
@@ -663,12 +673,12 @@ async function handleBetaClanModalSubmit(interaction) {
 
   // Validate all are 17 digits
   for (const sid of steamIds) {
-    if (!/^\d{17}$/.test(sid)) return interaction.reply({ content: ruen("Некоректный SteamID64: " + sid + ". Каждый должен быть из 17 цифр.", "Invalid SteamID64: " + sid + ". Each must be 17 digits."), ephemeral: true });
+    if (!/^\d{17}$/.test(sid)) return interaction.editReply({ content: ruen("Некоректный SteamID64: " + sid + ". Каждый должен быть из 17 цифр.", "Invalid SteamID64: " + sid + ". Each must be 17 digits.") });
   }
 
   // Check if any already registered
   for (const sid of steamIds) {
-    if (client.betas.has(sid)) return interaction.reply({ content: ruen("Игрок с SteamID64 " + sid + " уже зарегистрирован на бета-тест.", "Player with SteamID64 " + sid + " is already registered for the beta test."), ephemeral: true });
+    if (client.betas.has(sid)) return interaction.editReply({ content: ruen("Игрок с SteamID64 " + sid + " уже зарегистрирован на бета-тест.", "Player with SteamID64 " + sid + " is already registered for the beta test.") });
   }
 
   const id = nextBetaId();
@@ -681,7 +691,7 @@ async function handleBetaClanModalSubmit(interaction) {
     try { const m = await interaction.guild.members.fetch(interaction.user.id).catch(() => null); if (m) await m.roles.add(BETA_ROLE_ID); } catch (e) { console.error("[beta] role error:", e.message); }
   }
 
-  await interaction.reply({ content: ruen("Клан зарегистрирован на бета-тест! Ожидайте доступа.", "Clan registered for beta test! Wait for access."), ephemeral: true });
+  await interaction.editReply({ content: ruen("Клан зарегистровано на бета-тест! Очікуйте доступу.", "Clan registered for beta test! Wait for access.") });
 
   await sendBetaToChannels(interaction, new EmbedBuilder().setColor(0x009dff).setTitle("🏰 Новая заявка клана на бета / New clan beta application")
     .addFields({ name: "Тег клана / Clan Tag", value: clanTag, inline: true })
@@ -696,12 +706,13 @@ async function handleBetaClanModalSubmit(interaction) {
 }
 
 async function handleBetaPlayerModalSubmit(interaction) {
+  await interaction.deferReply({ flags: 64 });
   const steam = interaction.fields.getTextInputValue("player_steamid").trim();
   const nickname = interaction.fields.getTextInputValue("player_nickname").trim();
 
-  if (!/^\d{17}$/.test(steam)) return interaction.reply({ content: ruen("Некоректный SteamID64. Должно быть 17 цифр.", "Invalid SteamID64. Must be 17 digits."), ephemeral: true });
+  if (!/^\d{17}$/.test(steam)) return interaction.editReply({ content: ruen("Некоректний SteamID64. Має бути 17 цифр.", "Invalid SteamID64. Must be 17 digits.") });
 
-  if (client.betas.has(steam)) return interaction.reply({ content: ruen("Вы уже зарегистрированы на бета-тест.", "You are already registered for the beta test."), ephemeral: true });
+  if (client.betas.has(steam)) return interaction.editReply({ content: ruen("Ви вже зареєстровані на бета-тест.", "You are already registered for the beta test.") });
 
   const id = nextBetaId();
   client.betas.set(steam, { id, type: "player", steamId: steam, nickname, discordId: interaction.user.id, discordTag: interaction.user.tag, guildId: interaction.guildId, timestamp: nowISO(), status: "pending" });
@@ -711,7 +722,7 @@ async function handleBetaPlayerModalSubmit(interaction) {
     try { const m = await interaction.guild.members.fetch(interaction.user.id).catch(() => null); if (m) await m.roles.add(BETA_ROLE_ID); } catch (e) { console.error("[beta] role error:", e.message); }
   }
 
-  await interaction.reply({ content: ruen("Вы зарегистрированы на бета-тест! Ожидайте доступа.", "You are registered for beta test! Wait for access."), ephemeral: true });
+  await interaction.editReply({ content: ruen("Ви зареєстровані на бета-тест! Очікуйте доступу.", "You are registered for beta test! Wait for access.") });
 
   await sendBetaToChannels(interaction, new EmbedBuilder().setColor(0x009dff).setTitle("👤 Новая заявка гравца на бета / New player beta application")
     .addFields({ name: "Ник / Nickname", value: nickname, inline: true })
