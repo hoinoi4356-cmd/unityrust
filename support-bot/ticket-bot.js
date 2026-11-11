@@ -60,9 +60,6 @@ const STAFF_ROLE_IDS = (process.env.STAFF_ROLE_ID || "")
   .split(",")
   .map((id) => id.trim())
   .filter(Boolean);
-  .split(",")
-  .map((id) => id.trim())
-  .filter(Boolean);
 const TICKET_CATEGORY_NAME = process.env.TICKET_CATEGORY_NAME || "Тикеты / Tickets";
 const TICKET_CATEGORY_ID = process.env.TICKET_CATEGORY_ID;
 const LOG_CHANNEL_ID = process.env.LOG_CHANNEL_ID || "";
